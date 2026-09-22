@@ -1376,18 +1376,21 @@ export default function MarineMap({
           <button
             onClick={() => mapInstanceRef.current?.zoomIn()}
             title="Zoom In"
+            data-testid="map-zoom-in"
           >
             +
           </button>
           <button
             onClick={() => mapInstanceRef.current?.zoomOut()}
             title="Zoom Out"
+            data-testid="map-zoom-out"
           >
             −
           </button>
           <button
             onClick={() => mapInstanceRef.current?.setView([9.93, 76.16], 11)}
             title="Recenter on Kochi Approach"
+            data-testid="map-recenter"
           >
             ⌖
           </button>
@@ -1400,6 +1403,7 @@ export default function MarineMap({
               }, 250);
             }}
             title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Command Center View'}
+            data-testid="map-fullscreen-toggle"
             style={{ fontWeight: 'bold' }}
           >
             {isFullscreen ? '✕' : '⛶'}

@@ -1,0 +1,46 @@
+{
+  "summary": "Frontend hydration issue reproduced and isolated. Root cause was Next.js dev-origin blocking for local origin; external now hydrates and interactions work. Applied minimal frontend config fix in next.config.mjs.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "Backend health polling on landing",
+        "issue": "GET /api/v1/health returns 502 in browser console because backend is unavailable in this environment",
+        "affected_selectors": [
+          "[data-testid='landing-page']"
+        ]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/orca-frontend/next.config.mjs",
+    "/root/.emergent/automation_output/20260922_040617/console_20260922_040617.log",
+    "/root/.emergent/automation_output/20260922_040521/console_20260922_040521.log"
+  ],
+  "action_items": [
+    "Keep allowedDevOrigins merged with localhost/127.0.0.1 and preview hosts to avoid hydration regressions in dev/proxy setups.",
+    "If desired, suppress landing-console noise by handling /api/v1/health failures silently (currently expected with backend offline)."
+  ],
+  "critical_code_review_comments": [
+    "Hydration failure was environment/config-driven (allowedDevOrigins), not landing component logic.",
+    "LandingControls state logic is functional once client runtime initializes; no selector/functionality bug found in component."
+  ],
+  "updated_files": [
+    "/app/orca-frontend/next.config.mjs",
+    "/app/test_reports/iteration_1.json"
+  ],
+  "success_rate": {
+    "backend": "N/A (not requested)",
+    "frontend": "95%"
+  },
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "External URL hydration is stable (5/5 theme-toggle passes). Local 127.0.0.1 hydration also works after config patch. Remaining console 502s are from /api/v1/health because backend is intentionally unavailable/MOCKED fallback mode.",
+  "rca of the issue": "Repro before fix: local run showed WebSocket/HMR handshake errors and theme menu did not open (aria-expanded stayed false). Supervisor err log also showed 'Blocked cross-origin request to Next.js dev resource /_next/hmr from 127.0.0.1'. External initially had similar origin-block symptoms historically. Root cause: allowedDevOrigins list depended on env and did not robustly include all dev/proxy origins. Mitigation applied: next.config.mjs now merges default origins (127.0.0.1, localhost, preview domains) with env-defined origins. Verification: local and external both show [HMR] connected and landing theme menu opens (aria-expanded=true)."
+}

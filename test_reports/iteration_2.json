@@ -1,0 +1,62 @@
+{
+  "summary": "Completed frontend-only regression and UX validation across all 18 routes (desktop/mobile), key workspace/landing interactions, and route-level overflow checks. Core flows are working, with one confirmed mobile overflow regression on dashboard submetrics.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Dashboard segmented submetrics (mobile)",
+        "issue": "Document horizontal overflow persists on /dashboard at 390x844 (scrollWidth 477 > clientWidth 390). Overflow originates from .submetric-item/.submetric-text/.submetric-val region.",
+        "selector": ".segmented-status-row .submetric-item",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [
+      {
+        "flow": "Live backend-connected data fetches",
+        "issue": "Multiple frontend API requests return 502 (health, alerts, marine, chat, ml dashboard). UI fallback/preview mode behaves as designed.",
+        "affected_selectors": [
+          "[data-testid='connection-notice']",
+          "[data-testid='connection-notice-text']"
+        ]
+      }
+    ],
+    "design_issues": [
+      {
+        "screen": "Dashboard mobile",
+        "issues": [
+          "Horizontal scrolling caused by submetric strip layout conflict between legacy styles.css and ocean-system.css mobile overrides."
+        ]
+      }
+    ]
+  },
+  "test_report_links": [
+    "/root/.emergent/automation_output/20260922_043158/console_20260922_043158.log",
+    "/root/.emergent/automation_output/20260922_043553/console_20260922_043553.log",
+    "/app/orca-build.log"
+  ],
+  "action_items": [
+    "Fix dashboard mobile overflow by reconciling segmented submetric layout rules (legacy grid vs mobile flex intent).",
+    "If keeping smooth scrolling globally, add Next.js recommended html data-scroll-behavior attribute to remove warning noise.",
+    "Confirm /app/orca-build.log includes a complete successful build output (current file appears partial/truncated)."
+  ],
+  "critical_code_review_comments": [
+    "styles.css (~9843 lines) and ocean-system.css currently overlap on shared selectors; this creates cascade conflicts (confirmed in segmented-status-row mobile behavior).",
+    "In ocean-system.css mobile override, segmented-status-row sets flex-direction without explicitly changing display from legacy grid, so intended stacking does not reliably apply.",
+    "Large global stylesheet size and duplicate selector ownership increase regression risk during incremental redesign."
+  ],
+  "updated_files": [
+    "/app/test_reports/iteration_2.json"
+  ],
+  "success_rate": {
+    "backend": "N/A (not requested)",
+    "frontend": "88%"
+  },
+  "seed_data_creation": "No backend seed data created. UI-created local notices tested only.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All 18 routes render at 1920 widths with no document overflow. Landing controls, theme/language persistence, Ctrl+K routing, sidebar collapse/mobile drawer, dashboard widget persistence, fishing route forwarding, and map control surface are working. Dashboard still has real mobile overflow from submetric strip (non-Leaflet cause). Alerts acknowledge button is state-dependent label ('Acknowledge Bulletin' or 'Mark as Unacknowledged'). Backend is unavailable and frontend runs in preview/fallback mode.",
+  "rca of the issue": "Reproduced at 390x844 on /dashboard: document scrollWidth 477 vs clientWidth 390. Offending elements are within segmented-status-row (.submetric-item -> .submetric-text -> .submetric-val). Root cause is CSS cascade conflict: legacy styles.css defines segmented-status-row as 3-column grid, while ocean-system.css mobile override applies flex-direction/alignments without forcing display:flex; mobile intent does not fully override grid behavior, causing content spill. Mitigation: in mobile breakpoint explicitly set display:flex (or single-column grid) with width-safe child constraints and retest at 390x844."
+}

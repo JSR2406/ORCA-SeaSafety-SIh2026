@@ -30,6 +30,8 @@ function CopilotContent() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showEvidence, setShowEvidence] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const streamRef = useRef(null);
+
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
@@ -66,6 +68,10 @@ function CopilotContent() {
       timestamp: '21:32 IST'
     }
   ]);
+
+  useEffect(() => {
+    if (messages.length > 2) streamRef.current?.scrollTo({ top: streamRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages, isProcessing]);
 
   useEffect(() => {
     const q = searchParams?.get('q');
@@ -367,7 +373,7 @@ function CopilotContent() {
         <div className="copilot-terminal-actions">
           <span className="terminal-status-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             <span className={isBackendLive ? "enc-pulse-dot" : "enc-pulse-dot-amber"} />
-            {isBackendLive ? `FASTAPI LIVE (${latencyMs}ms)` : 'LOCAL EDGE MODE'}
+            {isBackendLive ? `CONNECTED (${latencyMs}ms)` : 'PREVIEW MODE'}
           </span>
           <button className="btn secondary btn-sm" onClick={() => router.push('/multilingual')}>
             <Icon name="Languages" size={13} />
@@ -376,6 +382,10 @@ function CopilotContent() {
         </div>
       }
     >
+      <section className="ocean-copilot-intro" data-testid="copilot-introduction">
+        <div><span className="ocean-eyebrow">MANY PERSPECTIVES. ONE CONVERSATION.</span><h2 data-testid="copilot-intro-heading">What would you like to understand?</h2><p>Explore ocean conditions, find fishing zones, or reason through your next journey.</p></div>
+        <div className="ocean-agent-chips" data-testid="copilot-agent-domains"><span><Icon name="Waves" size={13} /> Ocean</span><span><Icon name="CloudSun" size={13} /> Weather</span><span><Icon name="Compass" size={13} /> Geospatial</span></div>
+      </section>
       {/* Active Vessel Profile Bar */}
       <div className="terminal-vessel-bar">
         <div className="vessel-info-chunk">
@@ -400,7 +410,7 @@ function CopilotContent() {
       <div className="terminal-workspace-grid">
         <div className="terminal-dialog-panel">
           {/* Messages Stream */}
-          <div className="terminal-messages-stream">
+          <div className="terminal-messages-stream" ref={streamRef} aria-live="polite" data-testid="copilot-conversation">
             {messages.map((m) =>
               m.sender === 'user' ? (
                 <div key={m.id} className="terminal-user-entry">
@@ -412,10 +422,11 @@ function CopilotContent() {
                 </div>
               ) : (
                 <div key={m.id} className="terminal-bulletin-entry">
+                  <div className="ocean-message-source" data-testid={`copilot-source-${m.id}`}>{m.isLiveEngine ? 'API RESPONSE · VERIFY SOURCE FRESHNESS' : 'ILLUSTRATIVE RESPONSE · NOT FOR NAVIGATION'}</div>
                   {/* Bulletin Header Bar */}
                   <div className="bulletin-header-bar">
                     <div className="bulletin-id-block">
-                      <span className="b-agency">INCOIS-ORCA ADVISORY BULLETIN</span>
+                      <span className="b-agency">ORCA / MARINE PERSPECTIVE</span>
                       <code className="b-id">{m.bulletinId}</code>
                     </div>
                     <div className="bulletin-verdict-box">
@@ -489,7 +500,7 @@ function CopilotContent() {
                       title="Listen aloud using browser Speech Synthesis"
                     >
                       <Icon name={isSpeaking ? 'VolumeX' : 'Volume2'} size={13} />
-                      <span>{isSpeaking ? 'Stop Audio' : '🔊 Play Audio Bulletin (Speech)'}</span>
+                      <span>{isSpeaking ? 'Stop audio' : 'Listen to response'}</span>
                     </button>
 
                     <button
@@ -532,7 +543,7 @@ function CopilotContent() {
                         ))}
                       </ul>
                       <div className="ev-footer">
-                        <span>Deterministic Safety Policy Engine: PASSED (Zero Geofence Collisions on Route B)</span>
+                        <span>Verify source timestamps and official advisories before acting on this response.</span>
                       </div>
                     </div>
                   )}
@@ -577,6 +588,8 @@ function CopilotContent() {
             </div>
 
             <input
+              data-testid="copilot-message-input"
+              aria-label="Ask ORCA a marine question"
               type="text"
               className="terminal-text-input"
               disabled={isProcessing || isTranscribing}
@@ -624,6 +637,7 @@ function CopilotContent() {
 
             <button
               className="terminal-send-btn"
+              data-testid="copilot-send-button"
               disabled={isProcessing || isTranscribing || !inputText.trim()}
               onClick={() => handleSend()}
               title="Execute Query"

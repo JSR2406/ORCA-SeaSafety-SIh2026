@@ -494,6 +494,8 @@ export default function AlertsCenterPage() {
             <input
               type="text"
               className="alerts-search-input"
+              data-testid="alerts-search-input"
+              aria-label="Search marine notices"
               placeholder={t('alerts.searchPlaceholder', 'Search notices by keyword, sector, coordinates, or source (e.g. Swell, Kochi, NAVAREA)...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -518,6 +520,7 @@ export default function AlertsCenterPage() {
           ].map((tab) => (
             <button
               key={tab.key}
+              data-testid={`alerts-category-${tab.key.toLowerCase()}`}
               className={`alerts-tab-btn ${activeCategory === tab.key ? 'active' : ''}`}
               onClick={() => setActiveCategory(tab.key)}
             >
@@ -534,26 +537,30 @@ export default function AlertsCenterPage() {
             <button
               className={`filter-pill-btn ${activeSeverity === 'ALL' ? 'active' : ''}`}
               onClick={() => setActiveSeverity('ALL')}
+              data-testid="alerts-severity-all"
             >
               {t('alerts.allSeverity', 'All')}
             </button>
             <button
               className={`filter-pill-btn ${activeSeverity === 'HIGH' ? 'active-red' : ''}`}
               onClick={() => setActiveSeverity('HIGH')}
+              data-testid="alerts-severity-high"
             >
-              🔴 {t('alerts.criticalHigh', 'Critical / High')} ({alertsList.filter(a => a.level === 'HIGH').length})
+              <Icon name="Circle" size={9} className="text-hazard" /> {t('alerts.criticalHigh', 'Critical / High')} ({alertsList.filter(a => a.level === 'HIGH').length})
             </button>
             <button
               className={`filter-pill-btn ${activeSeverity === 'MEDIUM' ? 'active-orange' : ''}`}
               onClick={() => setActiveSeverity('MEDIUM')}
+              data-testid="alerts-severity-medium"
             >
-              🟠 {t('alerts.medium', 'Medium')} ({alertsList.filter(a => a.level === 'MEDIUM').length})
+              <Icon name="Circle" size={9} className="text-caution" /> {t('alerts.medium', 'Medium')} ({alertsList.filter(a => a.level === 'MEDIUM').length})
             </button>
             <button
               className={`filter-pill-btn ${activeSeverity === 'LOW' ? 'active-blue' : ''}`}
               onClick={() => setActiveSeverity('LOW')}
+              data-testid="alerts-severity-low"
             >
-              🔵 {t('alerts.lowInfo', 'Low / Info')} ({alertsList.filter(a => a.level === 'LOW' || a.level === 'INFO').length})
+              <Icon name="Circle" size={9} className="text-accent" /> {t('alerts.lowInfo', 'Low / Info')} ({alertsList.filter(a => a.level === 'LOW' || a.level === 'INFO').length})
             </button>
           </div>
 
@@ -569,13 +576,13 @@ export default function AlertsCenterPage() {
               className={`filter-pill-btn ${activeStatus === 'UNREAD' ? 'active-orange' : ''}`}
               onClick={() => setActiveStatus('UNREAD')}
             >
-              ⚡ {t('alerts.pendingAction', 'Pending Action')} ({pendingAckCount})
+              <Icon name="Zap" size={11} /> {t('alerts.pendingAction', 'Pending Action')} ({pendingAckCount})
             </button>
             <button
               className={`filter-pill-btn ${activeStatus === 'ACKNOWLEDGED' ? 'active-green' : ''}`}
               onClick={() => setActiveStatus('ACKNOWLEDGED')}
             >
-              ✅ {t('alerts.acknowledgedTag', 'Acknowledged')} ({acknowledgedCount})
+              <Icon name="CheckCheck" size={11} /> {t('alerts.acknowledgedTag', 'Acknowledged')} ({acknowledgedCount})
             </button>
           </div>
         </div>

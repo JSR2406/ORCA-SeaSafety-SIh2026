@@ -93,10 +93,11 @@ export default function ProfileSettingsPage() {
             { key: 'profile', label: 'Researcher Profile', icon: 'User' },
             { key: 'preferences', label: 'Navigational Preferences', icon: 'Sliders' },
             { key: 'notifications', label: 'Emergency Alerts Routing', icon: 'Bell' },
-            { key: 'security', label: 'Security &amp; API Keys', icon: 'Shield' }
+            { key: 'security', label: 'Security & API Keys', icon: 'Shield' }
           ].map((t) => (
             <button
               key={t.key}
+              data-testid={`settings-tab-${t.key}`}
               className={`tab-btn ${activeTab === t.key ? 'active' : ''}`}
               onClick={() => setActiveTab(t.key)}
             >

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,7 +49,27 @@ export default function Sidebar({
     .find(g => g.collapsible)
     ?.items.some(item => pathname === item.path);
 
-  const [techExpanded, setTechExpanded] = useState(true);
+  const [techExpanded, setTechExpanded] = useState(Boolean(isTechnicalRoute));
+  const sidebarRef = useRef(null);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    sidebarRef.current?.querySelector('button[aria-label="Close menu"]')?.focus();
+    const handleKey = (event) => {
+      if (event.key === 'Escape') onMobileClose?.();
+      if (event.key === 'Tab') {
+        const items = [...sidebarRef.current.querySelectorAll('a, button, [tabindex="0"]')].filter(el => el.getClientRects().length);
+        const first = items[0], last = items[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', handleKey); previousFocus?.focus(); };
+  }, [mobileOpen]);
 
   useEffect(() => {
     if (isTechnicalRoute) {
@@ -80,13 +100,16 @@ export default function Sidebar({
       </AnimatePresence>
 
       <aside
+        ref={sidebarRef}
+        aria-label="Workspace navigation"
+        data-testid="workspace-sidebar"
         className={`sidebar ${isCollapsed ? 'sidebar--collapsed' : ''} ${
           mobileOpen ? 'sidebar--mobile-open' : ''
         }`}
       >
         {/* Top Header with Logo and Collapse/Close controls */}
         <div className="side-top">
-          <Link href="/" className="side-top-brand" onClick={handleNavClick}>
+          <Link href="/" className="side-top-brand" onClick={handleNavClick} data-testid="sidebar-home-link">
             <Logo compact={isCollapsed} />
           </Link>
 
@@ -99,6 +122,7 @@ export default function Sidebar({
                 onClick={onToggleCollapse}
                 title="Collapse Navigation (Rail Mode)"
                 aria-label="Collapse sidebar"
+                data-testid="sidebar-collapse-button"
               >
                 <Icon name="PanelLeftClose" size={15} />
               </button>
@@ -111,6 +135,7 @@ export default function Sidebar({
                 className="side-mobile-close mobile-only"
                 onClick={onMobileClose}
                 aria-label="Close menu"
+                data-testid="sidebar-close-button"
               >
                 <Icon name="X" size={18} />
               </button>
@@ -132,6 +157,8 @@ export default function Sidebar({
                     className={`nav-group-label ${isCollapsible ? 'nav-group-label--toggle' : ''}`}
                     onClick={isCollapsible ? () => setTechExpanded((v) => !v) : undefined}
                     role={isCollapsible ? 'button' : undefined}
+                    data-testid={`sidebar-group-${group.label.toLowerCase().replaceAll(' ', '-')}`}
+                    aria-expanded={isCollapsible ? techExpanded : undefined}
                     tabIndex={isCollapsible ? 0 : undefined}
                     onKeyDown={
                       isCollapsible
@@ -169,6 +196,8 @@ export default function Sidebar({
                           <div key={item.path} className="nav-item-wrapper">
                             <Link
                               href={item.path}
+                              data-testid={`sidebar-${item.path.slice(1)}-link`}
+                              aria-current={isActive ? 'page' : undefined}
                               onClick={handleNavClick}
                               className={`nav-item ${isActive ? 'active' : ''}`}
                               title={isCollapsed ? translatedLabel : undefined}
@@ -239,14 +268,15 @@ export default function Sidebar({
             <div className="promo-card-icon">
               <Icon name="Sparkles" size={15} />
             </div>
-            <b className="promo-card-title">{t('nav.promoTitle', 'ORCA Cognitive Pro')}</b>
-            <p className="promo-card-desc">{t('nav.promoDesc', 'Deep hydrodynamic fusion & SAR satellite telemetry.')}</p>
+            <b className="promo-card-title">{t('ocean.sidebarTitle', 'A little curiosity. A deeper understanding.')}</b>
+            <p className="promo-card-desc">{t('ocean.sidebarDescription', 'Make sense of the sea with your marine copilot.')}</p>
             <button
               type="button"
               className="promo-card-btn"
+              data-testid="sidebar-consult-copilot"
               onClick={() => router.push('/ai-copilot')}
             >
-              <span>{t('nav.consultCopilot', 'Consult Copilot')}</span>
+              <span>{t('nav.consultCopilot', 'Consult Copilot')} ↗</span>
             </button>
           </div>
         )}
@@ -258,6 +288,7 @@ export default function Sidebar({
             onClick={() => router.push('/settings')}
             title="Dr. Ananya Kumar (Principal Oceanographer) — Click for Settings"
             role="button"
+            data-testid="sidebar-profile-link"
             tabIndex={0}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
@@ -279,6 +310,7 @@ export default function Sidebar({
                 <button
                   type="button"
                   className="user-mini-action"
+                  data-testid="sidebar-settings-button"
                   title="Profile & Telemetry Settings"
                   onClick={(e) => {
                     e.stopPropagation();

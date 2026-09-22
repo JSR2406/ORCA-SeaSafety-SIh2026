@@ -7807,7 +7807,7 @@ html[data-theme="ocean-daylight"] .login-input-wrap:focus-within {
 }
 
 @media (max-width: 900px) {
-  .sidebar { display: none; }
+  .sidebar { visibility: hidden; pointer-events: none; }
   .main { margin-left: 0; }
   .tactical-instrument-cluster { grid-template-columns: 1fr 1fr; }
   .gov-nav-bar .nav-links-clean { display: none; }
@@ -8256,6 +8256,8 @@ details[open] .drift-details-toggle {
 
   .sidebar.sidebar--mobile-open {
     transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
   }
 
   .sidebar-mobile-backdrop {

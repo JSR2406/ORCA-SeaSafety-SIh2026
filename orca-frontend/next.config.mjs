@@ -1,6 +1,14 @@
 /** @type {import('next').NextConfig} */
+const defaultDevOrigins = ['127.0.0.1', 'localhost', '*.preview.emergentagent.com', '**.preview.emergentcf.cloud'];
+const envDevOrigins = (process.env.ORCA_DEV_ORIGINS || '')
+  .split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+
 const nextConfig = {
   reactStrictMode: true,
+  devIndicators: false,
+  allowedDevOrigins: Array.from(new Set([...defaultDevOrigins, ...envDevOrigins])),
   async redirects() {
     return [
       {
@@ -31,7 +39,8 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const backendUrl = process.env.ORCA_API_UPSTREAM || process.env.NEXT_PUBLIC_API_URL;
+    if (!backendUrl) return [];
     return [
       {
         source: '/api/v1/:path*',

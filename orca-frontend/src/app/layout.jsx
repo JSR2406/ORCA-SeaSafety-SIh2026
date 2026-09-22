@@ -1,6 +1,8 @@
 import React from 'react';
 import 'leaflet/dist/leaflet.css';
 import '../styles.css';
+import '../ocean-system.css';
+import '../landing.css';
 import { ThemeProvider } from '../context/ThemeContext';
 import { LanguageProvider } from '../context/LanguageContext';
 import { BackendProvider } from '../context/BackendContext';
@@ -22,14 +24,14 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" data-theme="modern-minimalist" suppressHydrationWarning>
+    <html lang="en" data-theme="ocean-depths" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
-                  var t = localStorage.getItem('orca-app-theme') || localStorage.getItem('orca-landing-theme') || 'modern-minimalist';
+                  var t = localStorage.getItem('orca-app-theme') || localStorage.getItem('orca-landing-theme') || 'ocean-depths';
                   document.documentElement.setAttribute('data-theme', t);
                   var l = localStorage.getItem('orca-app-lang') || 'en';
                   document.documentElement.setAttribute('lang', l);
@@ -41,7 +43,7 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
           rel="stylesheet"
         />
       </head>

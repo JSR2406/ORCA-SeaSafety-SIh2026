@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import PageWrapper from './PageWrapper';
+import { ConnectionNotice } from './ConnectionNotice';
 
 export default function AppShell({ children, title, subtitle, actions }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -31,9 +32,10 @@ export default function AppShell({ children, title, subtitle, actions }) {
   };
 
   return (
-    <div className={`app-shell ${isCollapsed ? 'app-shell--rail' : ''}`}>
+    <div className={`app-shell ${isCollapsed ? 'app-shell--rail' : ''}`} data-testid="app-shell">
+      <a className="ocean-skip-link" href="#main-content" data-testid="skip-to-content">Skip to content</a>
       <Sidebar
-        isCollapsed={isCollapsed}
+        isCollapsed={isCollapsed && !mobileOpen}
         onToggleCollapse={handleToggleCollapse}
         mobileOpen={mobileOpen}
         onMobileClose={() => setMobileOpen(false)}
@@ -46,21 +48,26 @@ export default function AppShell({ children, title, subtitle, actions }) {
           onMobileMenuClick={() => setMobileOpen(true)}
         />
 
+        <ConnectionNotice />
+
         {title && (
           <div className="page-title-bar">
             <div className="title-text-group">
-              <h1 className="page-heading">{title}</h1>
+              <span className="ocean-eyebrow" data-testid="workspace-eyebrow">ORCA / INTELLIGENCE WORKSPACE</span>
+              <h1 className="page-heading" data-testid="page-heading">{title}</h1>
               <span className="page-subheading">
-                {subtitle || 'INCOIS • IMD • NAVAREA VIII Live Operational Telemetry'}
+                {subtitle || 'Explore your waters. Understand the evidence. Make informed decisions.'}
               </span>
             </div>
             {actions && <div className="page-title-actions">{actions}</div>}
           </div>
         )}
 
+        <main id="main-content" tabIndex={-1} className="ocean-main-content">
         <PageWrapper className="page-content">
           {children}
         </PageWrapper>
+        </main>
       </div>
     </div>
   );

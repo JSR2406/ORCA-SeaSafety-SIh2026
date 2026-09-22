@@ -194,7 +194,7 @@ export default function FishingIntelligencePage() {
           <label className="toolbar-label">
             <Icon name="Anchor" size={14} />
             <span>{t('fishing.basePort', 'BASE PORT:')}</span>
-            <select value={selectedPort} onChange={(e) => setSelectedPort(e.target.value)}>
+            <select data-testid="fishing-base-port" value={selectedPort} onChange={(e) => setSelectedPort(e.target.value)}>
               <option value="Kochi">Kochi Fishing Harbour (Kerala)</option>
               <option value="Munambam">Munambam Major Harbour</option>
               <option value="Alappuzha">Alappuzha Coastal Landing</option>
@@ -207,6 +207,7 @@ export default function FishingIntelligencePage() {
             <span>{t('fishing.forecastDate', 'FORECAST DATE:')}</span>
             <input
               type="date"
+              data-testid="fishing-forecast-date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
             />
@@ -217,6 +218,7 @@ export default function FishingIntelligencePage() {
           <button
             className={`tab-btn ${activeTab === 'pfz' ? 'active' : ''}`}
             onClick={() => setActiveTab('pfz')}
+            data-testid="fishing-pfz-tab"
           >
             <Icon name="Fish" size={13} />
             <span>{t('fishing.pfzTab', 'Potential Fishing Zones')} ({zonesList.length})</span>
@@ -224,6 +226,7 @@ export default function FishingIntelligencePage() {
           <button
             className={`tab-btn ${activeTab === 'productivity' ? 'active' : ''}`}
             onClick={() => setActiveTab('productivity')}
+            data-testid="fishing-productivity-tab"
           >
             <Icon name="Sparkles" size={13} />
             <span>{t('fishing.productivityTab', 'Ocean Productivity Fronts')}</span>
@@ -231,6 +234,7 @@ export default function FishingIntelligencePage() {
           <button
             className={`tab-btn ${activeTab === 'trends' ? 'active' : ''}`}
             onClick={() => setActiveTab('trends')}
+            data-testid="fishing-trends-tab"
           >
             <Icon name="TrendingUp" size={13} />
             <span>{t('fishing.trendsTab', 'Historical Catch Trends')}</span>

@@ -1,0 +1,165 @@
+{
+  "project_name": "ORCA - Marine Ecosystem Reasoning with Collaborative Agents",
+  "design_philosophy": {
+    "identity": "E1 Anti-AI Designer Strategy: Tactical Maritime Command & High-Density Oceanographic Telemetry",
+    "theme_archetype": "ARCHETYPE 5 LUXURY & ARCHETYPE 2 PERFORMANCE PRO FUSION - Tactical Deep-Sea Precision with Swiss Grid Rigor",
+    "emotional_tone": "Authoritative, mission-critical, serene deep-ocean intelligence, glassmorphism telemetry HUD, zero-slop Swiss spatial hierarchy",
+    "design_principles": [
+      "Fusion over Imitation: Merge Satellite Synthetic Aperture Radar aesthetics with high-contrast Swiss grid system and kinetic glass visual depth.",
+      "Emotion First: Evoke deep marine reliability and satellite-grade intelligence for ISRO/INCOIS sea state decisions.",
+      "Content is King: Treat every ocean map, PFZ layer, and cyclone warning as an interactive tactical telemetry screen.",
+      "Negative Space & Contrast: Use strict grid paddings (p-6/p-8), 1px subtle borders (border-white/10), and crisp high-contrast data callouts.",
+      "Anti-Center & Anti-Monotony: Avoid standard centered cards; utilize asymmetrical Bento grid spans (Tetris grid) and tight numeric micro-labels."
+    ]
+  },
+  "typography": {
+    "fonts": {
+      "headline": "Outfit, Clash Display, or Barlow Condensed (sans-serif display, high weight)",
+      "body": "Inter, DM Sans, or Plus Jakarta Sans (clean geometric sans)",
+      "mono": "JetBrains Mono or Space Mono (telemetry coordinates, wind knots, SST values)"
+    },
+    "pairing_strategy": "The Swiss Ocean Command: Heavy display headlines with uppercase tracking ([0.2em]) paired with ultra-legible geometric body and monospace telemetry figures.",
+    "hierarchy": {
+      "h1_hero": "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-none",
+      "h2_section": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight",
+      "h3_subsection": "text-xl sm:text-2xl font-semibold",
+      "h4_card_header": "text-lg sm:text-xl font-medium",
+      "body": "text-base sm:text-sm leading-relaxed",
+      "caption_micro": "text-xs font-mono uppercase tracking-widest text-muted-foreground"
+    },
+    "rules": [
+      "DO NOT use Inter or generic sans for Main & Sub-headings; reserve Inter purely for body copy.",
+      "Headlines > 32px MUST use tight letter spacing (tracking-tight or tracking-tighter).",
+      "Overlines & micro-labels MUST be Uppercase + Monospace + Wide Spacing (tracking-[0.2em])."
+    ]
+  },
+  "colors": {
+    "themes_matrix": {
+      "ocean-depths": {
+        "background": "#070F19",
+        "surface": "rgba(15, 27, 44, 0.75)",
+        "primary": "#00F0FF",
+        "secondary": "#0A84FF",
+        "accent": "#00FFB2",
+        "danger": "#FF3B30",
+        "warning": "#FFD60A",
+        "text_primary": "#F0F6FC",
+        "text_secondary": "#8B949E",
+        "border": "rgba(255, 255, 255, 0.12)"
+      },
+      "modern-minimalist": {
+        "background": "#F4F7FA",
+        "surface": "rgba(255, 255, 255, 0.85)",
+        "primary": "#0284C7",
+        "secondary": "#0F172A",
+        "accent": "#0EA5E9",
+        "danger": "#DC2626",
+        "warning": "#D97706",
+        "text_primary": "#0F172A",
+        "text_secondary": "#475569",
+        "border": "rgba(15, 23, 42, 0.1)"
+      },
+      "tech-innovation": {
+        "background": "#050B14",
+        "surface": "rgba(10, 20, 36, 0.8)",
+        "primary": "#0066FF",
+        "secondary": "#00FFFF",
+        "accent": "#7000FF",
+        "danger": "#FF0055",
+        "warning": "#FFB800",
+        "text_primary": "#FFFFFF",
+        "text_secondary": "#94A3B8",
+        "border": "rgba(0, 255, 255, 0.15)"
+      }
+    },
+    "contrast_rules": [
+      "Maintain minimum 4.5:1 ratio for body text and 3:1 for large display elements.",
+      "Never use pure black #000000; use cool slate-tinted deep ocean black (#070F19 or #050B14).",
+      "Explicitly set text color on hover states (e.g. hover:bg-cyan-500/20 hover:text-cyan-300).",
+      "Header and drop-downs MUST NEVER use 100% transparent backgrounds. Use backdrop-blur-xl (bg-black/60 or bg-white/70)."
+    ]
+  },
+  "visual_enhancers": {
+    "surface_treatment": "Optical Glassmorphism + Tactical Tracing Beams",
+    "glass_spec": "backdrop-blur-2xl bg-slate-950/70 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.37)] backdrop-saturate-150",
+    "tracing_beam": "Dynamic glowing border gradient animation for active telemetry widgets and high-priority PFZ advisories.",
+    "textures": "Subtle SVG grid noise overlay (opacity-5) to eliminate flat digital rendered surfaces.",
+    "card_styles": "Cardless or semi-transparent rectangular containers with subtle 1px inner stroke and concentric border-radius (max 8px to 12px)."
+  },
+  "grids_and_layouts": {
+    "dashboard_grid": "Mode B High Density Grid: grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6",
+    "marketing_grid": "Mode A Tetris Grid: grid-cols-1 md:grid-cols-8 lg:grid-cols-12 gap-8 with asymmetric spans",
+    "spacing_scale": "Tailwind standard p-4, p-6, p-8, p-12. Containers with borders MUST have internal padding (p-6 or p-8) to prevent text collision.",
+    "alignment": "Left-aligned content blocks with high-contrast monospace micro-labels; clear hierarchy without center-everything clutter."
+  },
+  "motion": {
+    "library": "Framer Motion (for React .js components)",
+    "micro_interactions": "Subtle scale-102 hover transforms, glow border shifts, smooth tab transitions (transition: color 0.2s, background-color 0.2s, border-color 0.2s).",
+    "rule": "Avoid transition: all to prevent transform breaking. Explicitly declare properties. Respect prefers-reduced-motion."
+  },
+  "3d_libraries_and_steps": {
+    "recommended_libraries": [
+      "React Three Fiber (@react-three/fiber) + Drei for interactive 3D ocean globe and satellite trajectory view",
+      "D3.js / Visx for advanced oceanographic temporal heatmaps and ocean depth profiles",
+      "TSParticles / Canvas for particle-based ocean current vector flows"
+    ],
+    "implementation_steps": [
+      "Step 1: Lazy load R3F canvas components inside suspense fallback with ocean shimmer skeletons.",
+      "Step 2: Apply transparent canvas background rgba(0,0,0,0) to merge R3F 3D earth node with dark glass UI shell.",
+      "Step 3: Add subtle floating animations using Drei Float component and directional studio lights for crisp relief rendering."
+    ]
+  },
+  "image_urls": [
+    {
+      "category": "hero_background",
+      "description": "Satellite aerial perspective of deep ocean waves",
+      "url": "https://images.unsplash.com/photo-1696988026448-25d38e480e64?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDZ8MHwxfHNlYXJjaHwzfHxzYXRlbGxpdGUlMjBvY2VhbiUyMHNlYSUyMHN1cmZhY2UlMjB0ZW1wZXJhdHVyZSUyMG1hcmluZSUyMG1hcCUyMHRlbGVtZXRyeXxlbnwwfHx8fDE3OTAwNDkyMDF8MA&ixlib=rb-4.1.0&q=85"
+    },
+    {
+      "category": "satellite_space",
+      "description": "Satellite orbiting above earth coastline for ISRO EO data context",
+      "url": "https://images.unsplash.com/photo-1460186136353-977e9d6085a1?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDZ8MHwxfHNlYXJjaHwxfHxzYXRlbGxpdGUlMjBvY2VhbiUyMHNlYSUyMHN1cmZhY2UlMjB0ZW1wZXJhdHVyZSUyMG1hcmluZSUyMG1hcCUyMHRlbGVtZXRyeXxlbnwwfHx8fDE3OTAwNDkyMDF8MA&ixlib=rb-4.1.0&q=85"
+    },
+    {
+      "category": "marine_waves",
+      "description": "Dramatic ocean surface current textures",
+      "url": "https://images.pexels.com/photos/38041314/pexels-photo-38041314.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+    },
+    {
+      "category": "global_earth",
+      "description": "High resolution satellite view of Earth ocean basins",
+      "url": "https://images.pexels.com/photos/30596212/pexels-photo-30596212.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940"
+    }
+  ],
+  "selective_high_impact_enhancements": [
+    {
+      "target_file": "/app/orca-frontend/src/components/AppShell.jsx",
+      "recommendation": "Transform standard layout into a floating tactical glass bridge with backdrop-blur-xl, subtle 1px border-white/10, dynamic theme switcher dropdown refinement, and status pingers."
+    },
+    {
+      "target_file": "/app/orca-frontend/src/components/StatCard.jsx",
+      "recommendation": "Upgrade to high-density telemetry widget with glowing top-border indicators, monospace metric trend values, and subtle hover elevation."
+    },
+    {
+      "target_file": "/app/orca-frontend/src/components/Sidebar.jsx",
+      "recommendation": "Add subtle active-state indicator pill, quick status telemetry badge for INCOIS connection, and clean icon-label alignment."
+    },
+    {
+      "target_file": "/app/orca-frontend/src/views/DashboardPage.jsx",
+      "recommendation": "Implement Tetris/Bento telemetry layout: 8-col dominant visual map/copilot panel + 4-col real-time PFZ and marine advisories feed."
+    },
+    {
+      "target_file": "/app/orca-frontend/src/views/CopilotPage.jsx",
+      "recommendation": "Refine AI agent conversation stream with multi-agent avatar chips (Planner, Oceanographer, Weather Agent), inline geospatial map trigger cards, and explainability confidence bars."
+    },
+    {
+      "target_file": "/app/orca-frontend/src/styles.css",
+      "recommendation": "Enhance CSS variables with modern glassmorphism tokens, backdrop-filter utilities, custom scrollbar styling, and smooth theme transition hooks."
+    }
+  ],
+  "accessibility_and_testing": {
+    "data_testid_requirement": "CRITICAL: All interactive buttons, nav links, form controls, map layer toggles, language switches, theme toggles, and data widgets MUST maintain or include data-testid attributes in kebab-case (e.g. data-testid=\"theme-toggle-button\", data-testid=\"copilot-send-button\", data-testid=\"pfz-layer-checkbox\").",
+    "motion_accessibility": "Ensure all CSS animations respect @media (prefers-reduced-motion: reduce)."
+  },
+  "instructions_to_main_agent": "Implement changes selectively in existing JavaScript files (.jsx/.js) without breaking existing routes, mock data structures, or API client methods. Focus on elevating visual polish, glassmorphism, typography hierarchy, stat cards, and layout grid responsiveness."
+}

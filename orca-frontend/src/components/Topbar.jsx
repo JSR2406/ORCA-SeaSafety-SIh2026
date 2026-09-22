@@ -138,6 +138,7 @@ export default function Topbar({
             className="topbar-mobile-btn mobile-only"
             onClick={onMobileMenuClick}
             aria-label="Open Navigation Drawer"
+            data-testid="mobile-menu-button"
             title="Open Menu"
           >
             <Icon name="Menu" size={19} />
@@ -152,6 +153,7 @@ export default function Topbar({
             onClick={onToggleCollapse}
             title="Expand Sidebar (240px)"
             aria-label="Expand sidebar"
+            data-testid="sidebar-expand-button"
           >
             <Icon name="PanelLeftOpen" size={16} />
           </button>
@@ -167,6 +169,8 @@ export default function Topbar({
             ref={searchInputRef}
             type="text"
             className="global-search-input"
+            data-testid="global-search-input"
+            aria-label="Search ocean data or ask ORCA"
             placeholder={t('topbar.searchPlaceholder', 'Search ocean telemetry, routes, alerts, or ask AI Copilot... (⌘K)')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -179,6 +183,7 @@ export default function Topbar({
             <button
               type="button"
               className="search-clear-btn"
+              data-testid="global-search-clear"
               onClick={(e) => {
                 e.stopPropagation();
                 setQuery('');
@@ -215,6 +220,7 @@ export default function Topbar({
                   {searchSuggestions.map((item) => (
                     <button
                       key={item.id}
+                      data-testid={`search-suggestion-${item.id}`}
                       type="button"
                       className="search-flyout-item"
                       onClick={item.action}
@@ -255,6 +261,8 @@ export default function Topbar({
             }}
             title={`Active Theme: ${activeThemeMeta.name}`}
             aria-label="Select visual theme"
+            data-testid="workspace-theme-toggle"
+            aria-expanded={themeOpen}
           >
             <span
               className="topbar-theme-dot"
@@ -279,6 +287,7 @@ export default function Topbar({
                   return (
                     <button
                       key={th.id}
+                      data-testid={`workspace-theme-${th.id}`}
                       type="button"
                       className={`topbar-theme-opt ${isSelected ? 'active' : ''}`}
                       onClick={() => {
@@ -304,6 +313,8 @@ export default function Topbar({
         <button
           type="button"
           className="topbar-icon-btn"
+          data-testid="workspace-alerts-button"
+          aria-label="Open alerts center"
           title={`${activeAlertsCount} Active Maritime Warnings`}
           onClick={() => router.push('/alerts')}
         >
@@ -321,6 +332,8 @@ export default function Topbar({
               setThemeOpen(false);
             }}
             title="Switch Regional Indian Language"
+            data-testid="workspace-language-toggle"
+            aria-expanded={langOpen}
           >
             <Icon name="Globe" size={13} />
             <span style={{ fontWeight: 600 }}>{language.toUpperCase()}</span>
@@ -342,6 +355,7 @@ export default function Topbar({
                   return (
                     <button
                       key={item.code}
+                      data-testid={`workspace-language-${item.code}`}
                       type="button"
                       className={`topbar-lang-opt ${isSelected ? 'active' : ''}`}
                       onClick={() => {
@@ -379,6 +393,7 @@ export default function Topbar({
             }
           }}
           aria-label="User profile settings"
+          data-testid="workspace-profile-button"
         >
           <div className="avatar-wrap">
             <div className="avatar-sm">AK</div>

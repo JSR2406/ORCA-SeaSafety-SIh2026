@@ -21,6 +21,37 @@ export default function DashboardPage() {
   const [activeView, setActiveView] = useState('chart'); // 'chart' | 'trend'
   const [hoveredTrendIndex, setHoveredTrendIndex] = useState(0);
   const [widgetModalOpen, setWidgetModalOpen] = useState(false);
+  const [hiddenWidgets, setHiddenWidgets] = useState([]);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('orca-dashboard-hidden-widgets') || '[]');
+      if (Array.isArray(saved)) setHiddenWidgets(saved.filter(id => ['chart', 'forecast', 'pfz', 'hazards'].includes(id)));
+    } catch {}
+  }, []);
+  const toggleWidget = (id) => {
+    setHiddenWidgets(previous => {
+      const next = previous.includes(id) ? previous.filter(item => item !== id) : [...previous, id];
+      try { localStorage.setItem('orca-dashboard-hidden-widgets', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+  useEffect(() => {
+    if (!widgetModalOpen) return;
+    const previous = document.activeElement;
+    const dialog = document.querySelector('[data-testid="dashboard-widget-dialog"]');
+    dialog?.querySelector('button')?.focus();
+    const onKey = event => {
+      if (event.key === 'Escape') setWidgetModalOpen(false);
+      if (event.key === 'Tab') {
+        const items = dialog?.querySelectorAll('button');
+        const first = items?.[0], last = items?.[items.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('keydown', onKey); previous?.focus(); };
+  }, [widgetModalOpen]);
 
   // Real backend telemetry state
   const [oceanTelemetry, setOceanTelemetry] = useState(null);
@@ -76,7 +107,7 @@ export default function DashboardPage() {
       id: 'swell',
       label: t('dashboard.seaState', 'Sea State & Weather'),
       value: oceanTelemetry ? `${oceanTelemetry.temperatureC}°C Air` : '26.0°C Air',
-      trend: isLiveTelemetry ? '● LIVE' : '● BUFFER',
+      trend: isLiveTelemetry ? '● CONNECTED' : '● SAMPLE',
       trendTone: 'neutral',
       icon: 'Waves',
       iconTone: 'cyan',
@@ -96,7 +127,7 @@ export default function DashboardPage() {
       id: 'pfz',
       label: t('dashboard.pfzCorridors', 'Active PFZ Corridors'),
       value: pfzData ? `${pfzData.total} Zones` : '20 Zones',
-      trend: '▲ NOAA LIVE',
+      trend: pfzData?.isLive ? '● CONNECTED' : '● SAMPLE',
       trendTone: 'up',
       icon: 'Fish',
       iconTone: 'green',
@@ -325,30 +356,30 @@ export default function DashboardPage() {
   // Available Widgets for Drawer
   const widgetCatalog = [
     {
-      id: 'ais',
-      name: 'Vessel Traffic Density (AIS)',
-      desc: 'Real-time coastal transponder tracks across inshore channels.',
+      id: 'chart',
+      name: 'Coastal overview',
+      desc: 'Your navigational map and five-day trend view.',
       tag: '#Navigation',
       icon: 'Navigation',
     },
     {
-      id: 'swan',
-      name: 'Wave Directional Spectrum',
-      desc: 'SWAN numerical sea state wave energy and frequency distribution.',
+      id: 'forecast',
+      name: 'The days ahead',
+      desc: 'At-a-glance temperature and wind outlook.',
       tag: '#Hydrodynamics',
       icon: 'Waves',
     },
     {
-      id: 'sst',
-      name: 'Thermal Upwelling Gradients',
-      desc: 'High-resolution NOAA CoastWatch SST contours & fronts.',
+      id: 'pfz',
+      name: 'Fishing corridors',
+      desc: 'Potential fishing zones with route-planning shortcuts.',
       tag: '#Fishery',
       icon: 'Thermometer',
     },
     {
-      id: 'navarea',
-      name: 'NAVAREA VIII Hazard Warnings',
-      desc: 'Sub-surface naval defense exercises and navigational closures.',
+      id: 'hazards',
+      name: 'On your radar',
+      desc: 'Marine advisories and your safety-center shortcut.',
       tag: '#Safety',
       icon: 'ShieldAlert',
     },
@@ -360,8 +391,9 @@ export default function DashboardPage() {
         {/* Page Top Header with Live Controls */}
         <div className="pro-page-header">
           <div className="pro-header-title-group">
-            <h1>{t('dashboard.title', 'Maritime Command Dashboard')}</h1>
-            <p>{t('dashboard.subtitle', 'Real-Time Hydrodynamics, Satellite Thermal Fronts & Coastal Geofencing')}</p>
+            <span className="ocean-eyebrow" data-testid="dashboard-eyebrow">YOUR OCEAN, IN FOCUS</span>
+            <h1 data-testid="dashboard-heading">{t('ocean.dashboardTitle', 'Marine overview')}</h1>
+            <p>{t('ocean.dashboardSubtitle', 'A connected perspective on the conditions that matter.')}</p>
           </div>
 
           <div className="pro-header-actions">
@@ -376,17 +408,18 @@ export default function DashboardPage() {
                   boxShadow: isLiveTelemetry ? '0 0 8px #10b981' : 'none'
                 }}
               />
-              <span>{isLiveTelemetry ? 'NOAA & FASTAPI LIVE' : 'EDGE BUFFER'}</span>
+              <span>{isLiveTelemetry ? 'DATA CONNECTED' : 'SAMPLE DATA'}</span>
             </div>
 
             <button
               type="button"
               className="pill-badge-btn"
               onClick={() => setWidgetModalOpen(true)}
+              data-testid="dashboard-customize-button"
               title="Customize dashboard widgets"
             >
               <Icon name="Sliders" size={13} />
-              <span>{t('dashboard.addWidgetTitle', 'Add widget')}</span>
+              <span>{t('ocean.customize', 'Customize')}</span>
             </button>
 
             <button
@@ -396,7 +429,7 @@ export default function DashboardPage() {
               title="Open Full Screen Navigational Chart"
             >
               <Icon name="Compass" size={13} />
-              <span>{t('common.export', 'Full Chart')}</span>
+              <span>{t('ocean.openExplorer', 'Open explorer')}</span>
             </button>
           </div>
         </div>
@@ -404,7 +437,7 @@ export default function DashboardPage() {
         {/* 4-Card Top KPI Metric Strip */}
         <div className="kpi-grid-pro">
           {kpiMetrics.map((kpi) => (
-            <div key={kpi.id} className="kpi-card-pro">
+            <div key={kpi.id} className="kpi-card-pro" data-testid={`dashboard-metric-${kpi.id}`}>
               <div className="kpi-top-row">
                 <span className="kpi-label">{kpi.label}</span>
                 <div className={`kpi-icon-box ${kpi.iconTone}`}>
@@ -429,13 +462,13 @@ export default function DashboardPage() {
           {/* Left Column (~65%) */}
           <div className="bento-left-column">
             {/* Primary Operations Hub Card */}
-            <div className="card-pro">
+            <div className="card-pro" data-hidden={hiddenWidgets.includes('chart')} data-testid="dashboard-chart-panel">
               <div className="trend-header-row">
                 <div className="trend-stat-box">
-                  <span className="trend-label">{t('dashboard.activeTrackB', 'OPERATIONAL PASSAGE VERDICT')}</span>
+                  <span className="trend-label">{t('ocean.coastalPerspective', 'YOUR COASTAL PERSPECTIVE')}</span>
                   <div className="trend-value-group">
                     <span className="trend-value-big">
-                      {marineBriefing?.composite_score && marineBriefing.composite_score > 0.65 ? 'CAUTION' : 'CLEAR PASSAGE'}
+                      {!marineBriefing?.isLive ? 'Kochi coastal waters' : marineBriefing.composite_score > 0.65 ? 'Caution advised' : 'Review voyage conditions'}
                     </span>
                     <span className={`kpi-trend-pill ${marineBriefing?.composite_score && marineBriefing.composite_score > 0.65 ? 'down' : 'up'}`}>
                       {marineBriefing?.composite_score ? `Index: ${marineBriefing.composite_score.toFixed(2)}` : 'Index: 0.61'}
@@ -448,6 +481,8 @@ export default function DashboardPage() {
                     type="button"
                     className={`toggle-pill-btn ${activeView === 'chart' ? 'active' : ''}`}
                     onClick={() => setActiveView('chart')}
+                    data-testid="dashboard-chart-tab"
+                    aria-pressed={activeView === 'chart'}
                   >
                     <Icon name="Map" size={12} />
                     <span>{t('dashboard.navChart', 'Nautical Chart')}</span>
@@ -456,16 +491,18 @@ export default function DashboardPage() {
                     type="button"
                     className={`toggle-pill-btn ${activeView === 'trend' ? 'active' : ''}`}
                     onClick={() => setActiveView('trend')}
+                    data-testid="dashboard-outlook-tab"
+                    aria-pressed={activeView === 'trend'}
                   >
                     <Icon name="Activity" size={12} />
-                    <span>{t('dashboard.waveTrendArea', '5-Day Hydrodynamic Curve')}</span>
+                    <span>{t('ocean.forecastTab', '5-day outlook')}</span>
                   </button>
                 </div>
               </div>
 
               {/* View Content */}
               {activeView === 'chart' ? (
-                <div style={{ height: '320px', borderRadius: '12px', overflow: 'hidden', position: 'relative' }}>
+                <div className="dashboard-map-preview" style={{ height: '320px', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
                   <MarineMap showControls={false} />
                 </div>
               ) : (
@@ -606,7 +643,7 @@ export default function DashboardPage() {
                   <span className="submetric-bar blue" />
                   <div className="submetric-text">
                     <span className="submetric-val">Kochi Port Fairway</span>
-                    <span className="submetric-lbl">Draft Sounding &gt; 5.2m Safe</span>
+                    <span className="submetric-lbl">Sample fairway reference</span>
                   </div>
                 </div>
 
@@ -637,11 +674,12 @@ export default function DashboardPage() {
             </div>
 
             {/* Real Potential Fishing Corridors (NOAA CoastWatch Fronts) */}
-            <div className="card-pro">
+            {hiddenWidgets.includes('chart') && hiddenWidgets.includes('pfz') && <div className="card-pro ocean-empty-panels" data-testid="dashboard-hidden-panels"><Icon name="LayoutDashboard" size={28} /><h2>Your overview, your way.</h2><p>Restore the panels you want to keep in focus.</p><button className="btn secondary" data-testid="restore-panels-button" onClick={() => setWidgetModalOpen(true)}>Choose your panels</button></div>}
+            <div className="card-pro" data-hidden={hiddenWidgets.includes('pfz')} data-testid="dashboard-fishing-panel">
               <div className="card-pro-header">
                 <div>
                   <h2 className="card-pro-title">
-                    <span>{t('dashboard.coastalStations', 'Top Potential Fishing Corridors (NOAA CoastWatch Fronts)')}</span>
+                    <span>{t('ocean.fishingCorridors', 'Potential fishing corridors')}</span>
                   </h2>
                   <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--c-text-muted)' }}>
                     High-resolution satellite ocean color & sea surface temperature gradients
@@ -654,7 +692,7 @@ export default function DashboardPage() {
                   title="View all 20 fishing zones"
                 >
                   <Icon name="ExternalLink" size={13} />
-                  <span>View All 20</span>
+                  <span>View all {pfzData?.total || ''}</span>
                 </button>
               </div>
 
@@ -723,11 +761,11 @@ export default function DashboardPage() {
           {/* Right Column (~35%) */}
           <div className="bento-right-column">
             {/* Real 5-Day Meteorological Outlook Bar Chart Card */}
-            <div className="card-pro">
+            <div className="card-pro" data-hidden={hiddenWidgets.includes('forecast')} data-testid="dashboard-forecast-panel">
               <div className="card-pro-header">
                 <div>
-                  <h3 className="card-pro-title">{t('dashboard.weeklyForecast', '5-Day Meteorological Outlook')}</h3>
-                  <span style={{ fontSize: '11px', color: 'var(--c-text-muted)' }}>Aggregated from 40 3-hour marine intervals</span>
+                  <h3 className="card-pro-title">{t('ocean.forecastTitle', 'The days ahead')}</h3>
+                  <span style={{ fontSize: '11px', color: 'var(--c-text-muted)' }}>{isLiveTelemetry ? '5-day marine forecast' : '5-day sample outlook · not a forecast'}</span>
                 </div>
                 <button
                   type="button"
@@ -748,6 +786,11 @@ export default function DashboardPage() {
                       key={bar.day + idx}
                       className={`weekly-bar-col ${isSelected ? 'active' : ''} ${isToday ? 'is-today' : ''}`}
                       onClick={() => setHoveredTrendIndex(idx)}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={isSelected}
+                      data-testid={`forecast-day-${idx}`}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setHoveredTrendIndex(idx); } }}
                       style={{ cursor: 'pointer' }}
                       title={`${bar.day} (${bar.date})${isToday ? ' [CURRENT DAY]' : ''}: ${bar.temp}°C, ${bar.windKts} kts wind, ${bar.condition}`}
                     >
@@ -783,10 +826,10 @@ export default function DashboardPage() {
             </div>
 
             {/* Active GDACS Tropical Cyclone & Marine Hazards Radar Card */}
-            <div className="card-pro">
+            <div className="card-pro" data-hidden={hiddenWidgets.includes('hazards')} data-testid="dashboard-hazards-panel">
               <div className="card-pro-header">
                 <div>
-                  <h3 className="card-pro-title">Active Marine Hazards Radar</h3>
+                  <h3 className="card-pro-title">On your radar</h3>
                   <span style={{ fontSize: '11px', color: 'var(--c-text-muted)' }}>GDACS & INCOIS Bulletin Feed</span>
                 </div>
                 <button
@@ -821,7 +864,7 @@ export default function DashboardPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--c-safe-bg, rgba(16, 185, 129, 0.12))', border: '1px solid var(--c-safe-border, rgba(16, 185, 129, 0.25))', borderRadius: '8px' }}>
                     <Icon name="CheckCircle" size={18} style={{ color: 'var(--c-safe, #10b981)' }} />
                     <span style={{ fontSize: '12px', color: 'var(--c-safe, #10b981)', fontWeight: 600 }}>
-                      Zero Active Cyclones in Immediate 300 NM Sector. Safe Passage Conditions.
+                      Loading marine advisories. Conditions are not yet verified.
                     </span>
                   </div>
                 )}
@@ -852,8 +895,8 @@ export default function DashboardPage() {
             <div className="card-pro ai-orb-card">
               <div className="card-pro-header" style={{ width: '100%' }}>
                 <div>
-                  <h3 className="card-pro-title">{t('dashboard.askCopilotTitle', 'FloatChat Marine AI Copilot')}</h3>
-                  <span style={{ fontSize: '10.5px', color: 'var(--c-text-muted)' }}>Real-Time Hydrodynamic Advisory</span>
+                  <h3 className="card-pro-title">{t('ocean.copilotTitle', 'A question worth asking?')}</h3>
+                  <span style={{ fontSize: '11px', color: 'var(--c-text-muted)' }}>Your marine copilot is a conversation away.</span>
                 </div>
                 <button
                   type="button"
@@ -883,7 +926,7 @@ export default function DashboardPage() {
                 <div className="ai-inline-response-box">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', fontWeight: 600, color: 'var(--th-accent-cyan, #38bdf8)', fontSize: '11.5px' }}>
                     <Icon name="Compass" size={12} />
-                    <span>FloatChat Advisory:</span>
+                    <span>{copilotReply.isLive ? 'ORCA response' : 'Sample response · not navigational advice'}</span>
                   </div>
                   <p style={{ margin: 0, fontSize: '11.5px', lineHeight: '1.45', color: 'var(--c-text-primary)' }}>
                     {copilotReply.answer || copilotReply.message || 'Regional sea state off Kochi indicates 1.4m swell with calm surface winds.'}
@@ -896,6 +939,8 @@ export default function DashboardPage() {
                 <input
                   type="text"
                   className="ai-capsule-input"
+                  data-testid="dashboard-copilot-input"
+                  aria-label="Ask your marine copilot"
                   placeholder={t('dashboard.copilotPlaceholder', 'Ask FloatChat about swell, PFZ, or weather...')}
                   value={copilotInput}
                   onChange={(e) => setCopilotInput(e.target.value)}
@@ -912,6 +957,7 @@ export default function DashboardPage() {
                 <button
                   type="submit"
                   className="ai-capsule-send-btn"
+                  data-testid="dashboard-copilot-send"
                   title="Submit prompt to FloatChat"
                   disabled={copilotLoading}
                 >
@@ -930,13 +976,19 @@ export default function DashboardPage() {
           >
             <div
               className="widget-modal-dialog"
+              data-testid="dashboard-widget-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="widget-dialog-title"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="widget-modal-header">
-                <h3>{t('dashboard.addWidgetTitle', 'Add Widget')}</h3>
+                <h3 id="widget-dialog-title">{t('ocean.customizeOverview', 'Make it your overview')}</h3>
                 <button
                   type="button"
                   className="widget-modal-close"
+                  data-testid="dashboard-widget-close"
+                  aria-label="Close customization"
                   onClick={() => setWidgetModalOpen(false)}
                 >
                   <Icon name="X" size={16} />
@@ -957,9 +1009,13 @@ export default function DashboardPage() {
                     <button
                       type="button"
                       className="widget-select-btn"
-                      onClick={() => setWidgetModalOpen(false)}
+                      onClick={() => toggleWidget(w.id)}
+                      role="switch"
+                      aria-checked={!hiddenWidgets.includes(w.id)}
+                      aria-label={`Show ${w.name}`}
+                      data-testid={`widget-toggle-${w.id}`}
                     >
-                      {t('common.apply', 'Select')}
+                      {hiddenWidgets.includes(w.id) ? 'Hidden' : 'Visible'}
                     </button>
                   </div>
                 ))}

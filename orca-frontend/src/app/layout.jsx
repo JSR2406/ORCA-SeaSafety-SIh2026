@@ -3,6 +3,7 @@ import 'leaflet/dist/leaflet.css';
 import '../styles.css';
 import '../ocean-system.css';
 import '../landing.css';
+import '../simple-dashboard.css';
 import { ThemeProvider } from '../context/ThemeContext';
 import { LanguageProvider } from '../context/LanguageContext';
 import { BackendProvider } from '../context/BackendContext';

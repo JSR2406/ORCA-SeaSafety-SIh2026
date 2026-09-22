@@ -34,6 +34,13 @@ User choices: “Let me create a distinctive, ocean-inspired direction based on 
 - Main-agent final screenshots and checks stored under `/app/`; mobile submetrics measured390px document width at390px viewport after fix. Mobile drawer visibility/Escape and dark form text contrast verified. Fixed clipped map preview controls by making the existing map fill its actual container and wrapping its coordinate readout.
 - No actual auth accounts created; see `test_credentials.md` for existing demo identities.
 
+## Workspace simplification (June 2026)
+- Rewrote `/dashboard` (`src/views/DashboardPage.jsx`) as an end-user-first "Today at sea" view: one go/no-go verdict card (plain language, driven by `composite_score`), four essential facts (wind, sea & sky, water temp, fishing zones), contained map card, plain-language ask box, compact 5-day strip, and a short warnings list.
+- Everything technical (PFZ corridor table, risk index, air temp, wind direction, pressure, tide, data source) now sits behind a single "More details" toggle, persisted in `localStorage` (`orca-dashboard-details`).
+- Removed the SVG temperature curve, chart/outlook tab switch, AI orb visual, 4-card KPI strip, and the widget customization modal (hidden-widget state no longer used).
+- New isolated stylesheet `src/simple-dashboard.css` (imported last in `src/app/layout.jsx`); responsive at 1100px and 700px breakpoints.
+- Verified: desktop 1920 and mobile 390 screenshots, `scrollWidth === clientWidth` (no horizontal overflow) in both simple and details mode; details toggle works on mobile.
+
 ## Known limitations / prioritized backlog
 ### P0 — required before operational use (outside frontend redesign)
 - Backend unavailable in imported environment. Existing offline API fallbacks remain; no live marine/AI/voice/SMS service has been verified. Do not treat UI data as navigational advice.

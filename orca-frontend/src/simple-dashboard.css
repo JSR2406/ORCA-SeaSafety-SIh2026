@@ -149,3 +149,16 @@
   .alert-actions > button { flex: 1 1 46%; justify-content: center; }
   .alert-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Harbour authority sign-in (gated alert publishing) */
+.operator-signin { display: flex; flex-direction: column; gap: 12px; }
+.operator-signin-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.operator-signin-row input {
+  flex: 1 1 200px; min-width: 0; padding: 10px 14px; border-radius: 999px; font-size: 13px;
+  background: var(--c-ground); border: 1px solid var(--c-border); color: var(--c-text-primary);
+}
+.operator-signin-row input:focus { outline: 2px solid var(--th-accent-cyan, #38bdf8); outline-offset: 1px; }
+.operator-signin-error { margin: 0; font-size: 12px; color: var(--c-hazard, #ef4444); }
+@media (max-width: 700px) {
+  .operator-signin-row > * { flex: 1 1 100%; justify-content: center; }
+}

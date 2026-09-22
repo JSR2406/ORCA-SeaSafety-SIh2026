@@ -13,7 +13,6 @@ export default function ProfileSettingsPage() {
   const { language, setLanguage, t, languages } = useLanguage();
   const [activeTab, setActiveTab] = useState('profile');
   const [saved, setSaved] = useState(false);
-  const [copiedToken, setCopiedToken] = useState(false);
   const [gmapsKey, setGmapsKey] = useState(() => getGoogleMapsApiKey());
   const [isEditingGmapsKey, setIsEditingGmapsKey] = useState(false);
   const [newGmapsKey, setNewGmapsKey] = useState('');
@@ -35,8 +34,7 @@ export default function ProfileSettingsPage() {
     mmsiNumber: '419001248',
     emergencyPhone: '+91 94470 12345',
     navtexFrequency: '518 kHz (English Standard)',
-    apiKey: 'inc_live_983a7f20e4bc11e98d71',
-    satelliteSecret: 'sat_sec_••••••••••••••••'
+    vesselCallSign: 'KL-09-ORCA'
   });
 
   const handleSave = () => {
@@ -356,28 +354,13 @@ export default function ProfileSettingsPage() {
             />
 
             <div className="form-grid-modern">
-              <label className="settings-field">
-                <span className="field-label">INCOIS SECURE REST API BEARER TOKEN</span>
-                <div className="api-key-input-row">
-                  <input type="text" readOnly value={form.apiKey} />
-                  <button
-                    type="button"
-                    className="btn secondary btn-sm"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(form.apiKey);
-                      setCopiedToken(true);
-                      setTimeout(() => setCopiedToken(false), 2000);
-                    }}
-                  >
-                    {copiedToken ? '✓ Copied' : 'Copy'}
-                  </button>
-                </div>
-              </label>
-
-              <label className="settings-field">
-                <span className="field-label">ISRO MOSDAC SATELLITE INGESTION SECRET</span>
-                <input type="password" readOnly value={form.satelliteSecret} />
-              </label>
+              <div className="settings-field" data-testid="settings-server-keys-note">
+                <span className="field-label">INCOIS / MOSDAC FEED CREDENTIALS</span>
+                <p style={{ margin: '6px 0 0', fontSize: '12px', color: 'var(--c-text-muted)', lineHeight: 1.6 }}>
+                  Data-feed credentials are held on the server and never sent to this browser.
+                  Ask your administrator to set them in the backend environment.
+                </p>
+              </div>
 
               <div className="settings-field">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>

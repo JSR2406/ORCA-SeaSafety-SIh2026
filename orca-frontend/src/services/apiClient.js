@@ -16,6 +16,32 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL;
 /**
  * Standard fetch helper with timeout and fallback
  */
+// Operator (harbour authority) session token for privileged alert writes.
+// Held in memory only: never localStorage, so an XSS payload cannot read it.
+let operatorToken = null;
+
+export function setOperatorToken(token) {
+  operatorToken = token || null;
+}
+
+export function getOperatorToken() {
+  return operatorToken;
+}
+
+function operatorAuthHeaders() {
+  return operatorToken ? { Authorization: `Bearer ${operatorToken}` } : {};
+}
+
+export async function operatorLogin({ email, password }) {
+  const res = await fetchWithTimeout('/api/v1/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password })
+  }, 5000);
+  if (!res?.access_token) throw new Error('Sign-in failed');
+  setOperatorToken(res.access_token);
+  return res;
+}
+
 async function fetchWithTimeout(endpoint, options = {}, timeoutMs = 4500) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -281,6 +307,7 @@ export async function createBackendAlert(alertData) {
   try {
     const res = await fetchWithTimeout('/api/v1/alerts', {
       method: 'POST',
+      headers: operatorAuthHeaders(),
       body: JSON.stringify(alertData)
     }, 4000);
     return { isLive: true, ...res };
@@ -301,7 +328,8 @@ export async function createBackendAlert(alertData) {
 export async function acknowledgeBackendAlert(alertId) {
   try {
     const res = await fetchWithTimeout(`/api/v1/alerts/${alertId}/acknowledge`, {
-      method: 'POST'
+      method: 'POST',
+      headers: operatorAuthHeaders()
     }, 3000);
     return { isLive: true, ...res };
   } catch (err) {

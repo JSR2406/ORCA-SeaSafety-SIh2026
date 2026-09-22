@@ -10,7 +10,9 @@ import {
   getHazards,
   createBackendAlert,
   acknowledgeBackendAlert,
-  synthesizeAudioWithSarvam
+  synthesizeAudioWithSarvam,
+  operatorLogin,
+  setOperatorToken
 } from '../services/apiClient';
 
 const LEVEL_WORDS = {
@@ -51,6 +53,11 @@ export default function AlertsCenterPage() {
   const [filter, setFilter] = useState('ALL'); // 'ALL' | 'SERIOUS' | 'UNREAD'
   const [expandedId, setExpandedId] = useState(null);
   const [showTools, setShowTools] = useState(false);
+  const [operatorEmail, setOperatorEmail] = useState('');
+  const [operatorPassword, setOperatorPassword] = useState('');
+  const [operatorSignedInAs, setOperatorSignedInAs] = useState(null);
+  const [operatorError, setOperatorError] = useState('');
+  const [operatorBusy, setOperatorBusy] = useState(false);
 
   const [currentlySpeakingId, setCurrentlySpeakingId] = useState(null);
   const audioElementRef = useRef(null);
@@ -198,6 +205,29 @@ export default function AlertsCenterPage() {
     setNewNoticeDirective('');
     showToast('Notice published to the warning list', 'success');
     try { await createBackendAlert(noticeItem); } catch {}
+  };
+
+  const handleOperatorLogin = async (e) => {
+    e.preventDefault();
+    setOperatorBusy(true);
+    setOperatorError('');
+    try {
+      const res = await operatorLogin({ email: operatorEmail.trim(), password: operatorPassword });
+      setOperatorSignedInAs(res.email || operatorEmail.trim());
+      setOperatorPassword('');
+      showToast('Signed in as harbour authority', 'success');
+    } catch (err) {
+      setOperatorError('Sign-in failed. Check the email and password, or the service is unavailable.');
+    } finally {
+      setOperatorBusy(false);
+    }
+  };
+
+  const handleOperatorSignOut = () => {
+    setOperatorToken(null);
+    setOperatorSignedInAs(null);
+    setOperatorError('');
+    showToast('Signed out of harbour tools', 'warning');
   };
 
   const sortedAlerts = useMemo(
@@ -456,17 +486,63 @@ export default function AlertsCenterPage() {
             </button>
           </div>
           {showTools && (
-            <div className="alert-actions" data-testid="alerts-tools-section">
-              <button
-                type="button"
-                className="btn secondary btn-sm"
-                onClick={() => setIsCreateNoticeModalOpen(true)}
-                data-testid="alerts-new-notice-button"
-              >
-                <Icon name="PlusCircle" size={13} />
-                <span>{t('plain.alertsNewNotice', 'Publish a notice')}</span>
-              </button>
-              <span className="simple-note">Published notices appear at the top of the list for everyone.</span>
+            <div data-testid="alerts-tools-section">
+              {operatorSignedInAs ? (
+                <div className="alert-actions">
+                  <button
+                    type="button"
+                    className="btn secondary btn-sm"
+                    onClick={() => setIsCreateNoticeModalOpen(true)}
+                    data-testid="alerts-new-notice-button"
+                  >
+                    <Icon name="PlusCircle" size={13} />
+                    <span>{t('plain.alertsNewNotice', 'Publish a notice')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn ghost btn-sm"
+                    onClick={handleOperatorSignOut}
+                    data-testid="alerts-operator-signout"
+                  >
+                    <Icon name="LogOut" size={13} />
+                    <span>Sign out</span>
+                  </button>
+                  <span className="simple-note" data-testid="alerts-operator-identity">
+                    Signed in as {operatorSignedInAs}. Published notices appear at the top of the list for everyone.
+                  </span>
+                </div>
+              ) : (
+                <form className="operator-signin" onSubmit={handleOperatorLogin} data-testid="alerts-operator-form">
+                  <p className="simple-note">
+                    Publishing a warning changes what every mariner sees, so it needs an authority sign-in.
+                  </p>
+                  <div className="operator-signin-row">
+                    <input
+                      type="email"
+                      required
+                      placeholder="Authority email"
+                      value={operatorEmail}
+                      onChange={(e) => setOperatorEmail(e.target.value)}
+                      data-testid="alerts-operator-email"
+                    />
+                    <input
+                      type="password"
+                      required
+                      placeholder="Password"
+                      value={operatorPassword}
+                      onChange={(e) => setOperatorPassword(e.target.value)}
+                      data-testid="alerts-operator-password"
+                    />
+                    <button type="submit" className="btn primary btn-sm" disabled={operatorBusy} data-testid="alerts-operator-submit">
+                      <Icon name="LogIn" size={13} />
+                      <span>{operatorBusy ? 'Signing in…' : 'Sign in'}</span>
+                    </button>
+                  </div>
+                  {operatorError && (
+                    <p className="operator-signin-error" data-testid="alerts-operator-error">{operatorError}</p>
+                  )}
+                </form>
+              )}
             </div>
           )}
         </div>

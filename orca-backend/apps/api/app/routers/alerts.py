@@ -14,9 +14,11 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import structlog
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.agents.proactive_agent import get_proactive_engine
+from app.security.operator_auth import require_authority
 from app.services.alert_repository import AlertRepository
 
 logger = structlog.get_logger(__name__)
@@ -81,7 +83,10 @@ async def get_alert(alert_id: str) -> Dict[str, Any]:
 
 
 @router.post("/alerts/{alert_id}/acknowledge")
-async def acknowledge_alert(alert_id: str) -> Dict[str, Any]:
+async def acknowledge_alert(
+    alert_id: str,
+    operator: Dict[str, Any] = Depends(require_authority),
+) -> Dict[str, Any]:
     try:
         updated = await _repo().update_alert(
             alert_id, status="acknowledged",
@@ -97,8 +102,45 @@ async def acknowledge_alert(alert_id: str) -> Dict[str, Any]:
     return {"status": "acknowledged", "id": alert_id}
 
 
+class AlertCreateRequest(BaseModel):
+    """Validated payload for an authority-published safety notice."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: Optional[str] = Field(default=None, max_length=64)
+    event_id: Optional[str] = Field(default=None, max_length=64)
+    type: Optional[str] = Field(default=None, max_length=64)
+    severity: Optional[str] = Field(default=None, max_length=32)
+    level: Optional[str] = Field(default=None, max_length=32)
+    status: Optional[str] = Field(default=None, max_length=32)
+    title: Optional[str] = Field(default=None, max_length=200)
+    message: Optional[str] = Field(default=None, max_length=2000)
+    desc: Optional[str] = Field(default=None, max_length=2000)
+    place: Optional[str] = Field(default=None, max_length=200)
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180)
+    lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    lon: Optional[float] = Field(default=None, ge=-180, le=180)
+    lng: Optional[float] = Field(default=None, ge=-180, le=180)
+    coordinates: Optional[str] = Field(default=None, max_length=64)
+    source: Optional[str] = Field(default=None, max_length=120)
+    dedupe_key: Optional[str] = Field(default=None, max_length=64)
+    valid_from: Optional[str] = Field(default=None, max_length=64)
+    valid_until: Optional[str] = Field(default=None, max_length=64)
+    validTill: Optional[str] = Field(default=None, max_length=64)
+    confidence: float = Field(default=0.98, ge=0, le=1)
+    evidence: Optional[List[Dict[str, Any]]] = None
+    action_required: Optional[str] = Field(default=None, max_length=500)
+    actionRequired: Optional[str] = Field(default=None, max_length=500)
+    category: Optional[str] = Field(default=None, max_length=64)
+
+
 @router.post("/alerts")
-async def create_alert(body: Dict[str, Any]) -> Dict[str, Any]:
+async def create_alert(
+    payload: AlertCreateRequest,
+    operator: Dict[str, Any] = Depends(require_authority),
+) -> Dict[str, Any]:
+    body = payload.model_dump(exclude_none=True)
     alert_id = body.get("id") or f"ALT-DISPATCH-{datetime.now(timezone.utc).strftime('%H%M%S')}"
     now_iso = datetime.now(timezone.utc).isoformat()
     row = {
@@ -129,9 +171,11 @@ async def create_alert(body: Dict[str, Any]) -> Dict[str, Any]:
         "actionRequired": body.get("actionRequired") or body.get("action_required", "Maintain VHF Channel 16 continuous listening watch."),
         "category": body.get("category", "Safety")
     }
+    row["published_by"] = operator.get("sub")
     repo = _repo()
     repo._memory_alerts[alert_id] = row
-    logger.info("alert_created", alert_id=alert_id, title=row["title"])
+    logger.info("alert_created", alert_id=alert_id, title=row["title"],
+                published_by=operator.get("sub"))
     return {"status": "created", "alert": row}
 
 
@@ -146,7 +190,10 @@ async def list_events(limit: int = Query(50, ge=1, le=500)) -> Dict[str, Any]:
 
 
 @router.post("/alerts/preferences")
-async def set_preferences(body: Dict[str, str]) -> Dict[str, Any]:
+async def set_preferences(
+    body: Dict[str, str],
+    operator: Dict[str, Any] = Depends(require_authority),
+) -> Dict[str, Any]:
     user_id = body.get("user_id", "default")
     changes = {k: v for k, v in body.items()
                if k in ("cyclone", "lightning", "waves", "weather",

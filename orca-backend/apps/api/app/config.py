@@ -18,6 +18,12 @@ class Settings(BaseSettings):
         protected_namespaces=("settings_",),
     )
 
+    # Operator authentication for maritime-authority writes (alert publish /
+    # acknowledge).  Empty secret or credentials => those endpoints fail closed.
+    auth_jwt_secret: str = ""
+    auth_operator_email: str = ""
+    auth_operator_password: str = ""
+
     # Database - PostgreSQL with PostGIS
     database_url: str = "postgresql+asyncpg://postgres:password@localhost:5432/floatchat"
     geom_srid: int = 4326

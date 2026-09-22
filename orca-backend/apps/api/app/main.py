@@ -15,7 +15,7 @@ from app.contracts.errors import ErrorCode, ErrorResponse
 from app.contracts.versions import contract_meta
 from app.middleware.correlation import CorrelationMiddleware
 from app.middleware.ratelimit import RateLimitMiddleware
-from app.routers import chat, profiles, voice, health, anomalies, scenarios, risk, exports, datasets, query_runs, marine, mcp, orchestrate, readiness, alerts, ml, knowledge, route, query as query_router
+from app.routers import chat, profiles, voice, health, anomalies, scenarios, risk, exports, datasets, query_runs, marine, mcp, orchestrate, readiness, alerts, ml, knowledge, route, auth, query as query_router
 from app.datasources.registry import build_registry
 from app.ingestion import IngestionPipeline, SourcePollingScheduler
 from app.ingestion.proactive_scheduler import ProactiveScheduler, reset_scheduler_singleton
@@ -178,8 +178,20 @@ app.add_middleware(
 app.add_middleware(RateLimitMiddleware, rpm=settings.rate_limit_rpm)
 app.add_middleware(CorrelationMiddleware)
 
+
+@app.middleware("http")
+async def security_headers(request, call_next):
+    """Baseline response hardening (clickjacking, sniffing, referrer leaks)."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
 # Include routers
 app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(readiness.router)
 app.include_router(chat.router)
 app.include_router(profiles.router)

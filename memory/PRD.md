@@ -41,6 +41,14 @@ User choices: “Let me create a distinctive, ocean-inspired direction based on 
 - New isolated stylesheet `src/simple-dashboard.css` (imported last in `src/app/layout.jsx`); responsive at 1100px and 700px breakpoints.
 - Verified: desktop 1920 and mobile 390 screenshots, `scrollWidth === clientWidth` (no horizontal overflow) in both simple and details mode; details toggle works on mobile.
 
+## Alerts simplification (June 2026)
+- Rewrote `/alerts` (`src/views/AlertsCenterPage.jsx`) in the same calm style: "What to watch out for" header, one right-now summary card, newest-warning-first list sorted by a `minutesOld()` parser of the `time` field.
+- Each warning now reads in plain words: severity as Serious / Be careful / For information, place, description, a highlighted "What to do" box, and actions Listen, Show on map, Ask ORCA, Mark read. Notice ID, source, position and validity hide behind a per-card "Details" expander.
+- Replaced the 4-card KPI strip, 6 category tabs, severity + status pill rows and NAVTEX copy with a single search box and three chips (All / Serious only / Unread).
+- Removed the fleet-emergency-broadcast console; the notice composer is kept under a collapsed "Harbour tools" panel with plain-language fields.
+- Plain labels use new `plain.*` translation keys so legacy technical translations do not override them.
+- Verified: desktop 1920 and mobile 390, no horizontal overflow, filter chips, details expand, mark-read toast all working.
+
 ## Known limitations / prioritized backlog
 ### P0 — required before operational use (outside frontend redesign)
 - Backend unavailable in imported environment. Existing offline API fallbacks remain; no live marine/AI/voice/SMS service has been verified. Do not treat UI data as navigational advice.

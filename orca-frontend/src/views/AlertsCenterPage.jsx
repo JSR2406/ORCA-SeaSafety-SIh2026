@@ -1,222 +1,144 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import AppShell from '../components/AppShell';
-import Card from '../components/Card';
-import Badge from '../components/Badge';
 import Icon from '../components/Icon';
 import { alerts as mockAlerts } from '../data/mock';
 import { useLanguage } from '../context/LanguageContext';
-import { useBackend } from '../context/BackendContext';
 import {
   getHazards,
-  getBackendAlerts,
   createBackendAlert,
   acknowledgeBackendAlert,
   synthesizeAudioWithSarvam
 } from '../services/apiClient';
 
+const LEVEL_WORDS = {
+  HIGH: { word: 'Serious', tone: 'avoid', icon: 'AlertOctagon' },
+  MEDIUM: { word: 'Be careful', tone: 'caution', icon: 'AlertTriangle' },
+  LOW: { word: 'For information', tone: 'good', icon: 'Info' },
+  INFO: { word: 'For information', tone: 'good', icon: 'Info' }
+};
+
+// "15 min ago" / "3 hours ago" / "Just now" / date string -> minutes old, for newest-first sorting.
+function minutesOld(time) {
+  if (!time) return 1e9;
+  const value = String(time).toLowerCase().trim();
+  if (value === 'just now' || value === 'active') return 0;
+  const match = value.match(/^(\d+)\s*(min|minute|hour|hr|day)/);
+  if (match) {
+    const amount = parseInt(match[1], 10);
+    if (match[2].startsWith('min')) return amount;
+    if (match[2].startsWith('h')) return amount * 60;
+    return amount * 1440;
+  }
+  const parsed = Date.parse(time);
+  if (!Number.isNaN(parsed)) return Math.max(0, (Date.now() - parsed) / 60000);
+  return 1e9;
+}
+
 export default function AlertsCenterPage() {
   const router = useRouter();
   const { t, language } = useLanguage();
-  const { isBackendLive } = useBackend();
 
-  // Primary State
   const [alertsList, setAlertsList] = useState(mockAlerts);
   const [readAlerts, setReadAlerts] = useState({});
-  const [liveHazardsLoaded, setLiveHazardsLoaded] = useState(false);
-  const [realCount, setRealCount] = useState(0);
+  const [isLive, setIsLive] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState('Just now');
 
-  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [activeSeverity, setActiveSeverity] = useState('ALL');
-  const [activeStatus, setActiveStatus] = useState('ALL'); // 'ALL' | 'UNREAD' | 'ACKNOWLEDGED'
+  const [filter, setFilter] = useState('ALL'); // 'ALL' | 'SERIOUS' | 'UNREAD'
+  const [expandedId, setExpandedId] = useState(null);
+  const [showTools, setShowTools] = useState(false);
 
-  // Audio / Speech State
   const [currentlySpeakingId, setCurrentlySpeakingId] = useState(null);
   const audioElementRef = useRef(null);
-
-  // Toast Notifications State
   const [toasts, setToasts] = useState([]);
 
-  // Modals State
-  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
-  const [broadcastProgress, setBroadcastProgress] = useState(0);
-  const [broadcastStep, setBroadcastStep] = useState('idle'); // 'idle' | 'transmitting' | 'success'
-  const [broadcastChannel, setBroadcastChannel] = useState('ALL');
-  const [broadcastSeverity, setBroadcastSeverity] = useState('HIGH');
-  const [broadcastSector, setBroadcastSector] = useState('Sector 4 (Kochi to Alappuzha 50 NM Offshore)');
-  const [customNotice, setCustomNotice] = useState('URGENT: Squall warning in Central Arabian Sea. Vessels advised to alter course to Fairway Route B.');
-
-  // Create Notice Modal State
+  // Notice composer (kept for harbour authorities, tucked away under tools)
   const [isCreateNoticeModalOpen, setIsCreateNoticeModalOpen] = useState(false);
   const [newNoticeTitle, setNewNoticeTitle] = useState('');
   const [newNoticeDesc, setNewNoticeDesc] = useState('');
-  const [newNoticeCategory, setNewNoticeCategory] = useState('Safety');
   const [newNoticeSeverity, setNewNoticeSeverity] = useState('MEDIUM');
-  const [newNoticeSector, setNewNoticeSector] = useState('Kochi Fairway & Approaches');
+  const [newNoticeSector, setNewNoticeSector] = useState('Kochi fairway and approaches');
   const [newNoticeDirective, setNewNoticeDirective] = useState('');
 
-  // Audio Tone Generator (Web Audio API)
-  const playMarineTone = useCallback((type = 'beep') => {
-    if (typeof window === 'undefined') return;
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      if (type === 'broadcast') {
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(880, ctx.currentTime);
-        osc.frequency.setValueAtTime(440, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.12, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.35);
-      } else {
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(520, ctx.currentTime);
-        osc.frequency.setValueAtTime(780, ctx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.2);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.2);
-      }
-    } catch (_) {}
-  }, []);
-
-  // Helper to show floating toasts
   const showToast = useCallback((message, type = 'success') => {
     const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(item => item.id !== id)), 4000);
   }, []);
 
-  // Fetch Live Alerts from Backend
   const loadAlerts = useCallback(async (manual = false) => {
     if (manual) setIsRefreshing(true);
     try {
       const res = await getHazards();
-      if (res && res.hazards && res.hazards.length > 0) {
+      if (res?.hazards?.length) {
         setAlertsList(res.hazards);
-        setLiveHazardsLoaded(res.isLive);
-        setRealCount(res.realCount || res.hazards.length);
-
+        setIsLive(Boolean(res.isLive));
         const nextRead = {};
-        res.hazards.forEach((h) => {
-          if (h.status === 'acknowledged') {
-            nextRead[h.id] = true;
-          }
-        });
-        setReadAlerts((prev) => ({ ...prev, ...nextRead }));
-        setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-        if (manual) showToast(t('alerts.refreshedMsg', 'Live alerts synchronized with Coast Guard & INCOIS network'), 'success');
+        res.hazards.forEach(h => { if (h.status === 'acknowledged') nextRead[h.id] = true; });
+        setReadAlerts(prev => ({ ...prev, ...nextRead }));
+        setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        if (manual) showToast(t('plain.alertsUpdated', 'Warnings updated'), 'success');
       }
-    } catch (err) {
-      if (manual) showToast(t('alerts.refreshOfflineMsg', 'Offline mode: loaded edge-cached notices'), 'warning');
+    } catch {
+      if (manual) showToast(t('plain.alertsOffline', 'You are offline · showing saved warnings'), 'warning');
     } finally {
       if (manual) setIsRefreshing(false);
     }
   }, [showToast, t]);
 
-  useEffect(() => {
-    loadAlerts();
-  }, [loadAlerts]);
+  useEffect(() => { loadAlerts(); }, [loadAlerts]);
 
-  // Extract Coordinates helper
   const parseCoordinates = (item) => {
-    if (item.lat && (item.lon || item.lng)) {
-      return { lat: item.lat, lon: item.lon || item.lng };
-    }
+    if (item.lat && (item.lon || item.lng)) return { lat: item.lat, lon: item.lon || item.lng };
     if (item.coordinates) {
       const match = item.coordinates.match(/([0-9]+\.?[0-9]*)[°\s]*([0-9]+\.?[0-9]*)?'?[NSns]?[\s,]+([0-9]+\.?[0-9]*)[°\s]*([0-9]+\.?[0-9]*)?'?[EWew]?/);
       if (match) {
-        const lat = parseFloat(match[1]) + (parseFloat(match[2] || 0) / 60);
-        const lon = parseFloat(match[3]) + (parseFloat(match[4] || 0) / 60);
-        return { lat, lon };
+        return {
+          lat: parseFloat(match[1]) + (parseFloat(match[2] || 0) / 60),
+          lon: parseFloat(match[3]) + (parseFloat(match[4] || 0) / 60)
+        };
       }
     }
-    return { lat: 9.9667, lon: 76.1650 };
+    return { lat: 9.9667, lon: 76.165 };
   };
 
-  // Plot Alert on Marine Map
   const handlePlotOnMap = (item) => {
     const coords = parseCoordinates(item);
     router.push(`/marine-map?lat=${coords.lat.toFixed(4)}&lng=${coords.lon.toFixed(4)}&zoom=13&name=${encodeURIComponent(item.title)}`);
   };
 
-  // Acknowledge Single Bulletin
   const toggleAcknowledge = async (item) => {
-    const isCurrentlyRead = !!readAlerts[item.id];
-    const nextReadState = !isCurrentlyRead;
-
-    setReadAlerts((prev) => ({ ...prev, [item.id]: nextReadState }));
-    playMarineTone('beep');
-
-    if (nextReadState) {
-      showToast(`${t('alerts.acknowledgedTag', 'Acknowledged')} notice ${item.id}`, 'success');
-      try {
-        await acknowledgeBackendAlert(item.id);
-      } catch (_) {}
-    } else {
-      showToast(`${t('alerts.reopenedTag', 'Reopened active')} notice ${item.id}`, 'warning');
+    const next = !readAlerts[item.id];
+    setReadAlerts(prev => ({ ...prev, [item.id]: next }));
+    showToast(next ? 'Marked as read' : 'Moved back to unread', next ? 'success' : 'warning');
+    if (next) {
+      try { await acknowledgeBackendAlert(item.id); } catch {}
     }
   };
 
-  // Mark All Read
   const markAllRead = () => {
     const next = {};
-    alertsList.forEach((a) => { next[a.id] = true; });
+    alertsList.forEach(a => { next[a.id] = true; });
     setReadAlerts(next);
-    playMarineTone('beep');
-    showToast(t('alerts.allMarkedAck', 'All bulletins marked as acknowledged'), 'success');
+    showToast('All warnings marked as read', 'success');
   };
 
-  // Voice Readout
   const handleSpeakAlert = (item) => {
-    if (currentlySpeakingId === item.id) {
-      if (audioElementRef.current) {
-        audioElementRef.current.pause();
-        audioElementRef.current = null;
-      }
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
-      setCurrentlySpeakingId(null);
-      return;
-    }
-
-    if (audioElementRef.current) {
-      audioElementRef.current.pause();
-      audioElementRef.current = null;
-    }
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-
-    setCurrentlySpeakingId(item.id);
-    const speechText = `${item.title}. Directive: ${item.actionRequired}. Sector: ${item.place}. Valid until ${item.validTill}.`;
-
-    const langMap = {
-      ml: 'ml-IN',
-      ta: 'ta-IN',
-      hi: 'hi-IN',
-      mr: 'mr-IN',
-      te: 'te-IN',
-      bn: 'bn-IN',
-      en: 'en-IN'
+    const stop = () => {
+      if (audioElementRef.current) { audioElementRef.current.pause(); audioElementRef.current = null; }
+      if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
     };
+
+    if (currentlySpeakingId === item.id) { stop(); setCurrentlySpeakingId(null); return; }
+    stop();
+    setCurrentlySpeakingId(item.id);
+
+    const speechText = `${item.title}. What to do: ${item.actionRequired}. Area: ${item.place}. Valid until ${item.validTill}.`;
+    const langMap = { ml: 'ml-IN', ta: 'ta-IN', hi: 'hi-IN', mr: 'mr-IN', te: 'te-IN', bn: 'bn-IN', en: 'en-IN' };
     const speechLang = langMap[language] || 'en-IN';
 
     const fallbackBrowserSpeech = () => {
@@ -233,99 +155,20 @@ export default function AlertsCenterPage() {
     };
 
     synthesizeAudioWithSarvam(speechText, speechLang)
-      .then((res) => {
-        if (res && res.audioUrl) {
+      .then(res => {
+        if (res?.audioUrl) {
           const audio = new Audio(res.audioUrl);
           audioElementRef.current = audio;
           audio.onended = () => setCurrentlySpeakingId(null);
-          audio.onerror = () => fallbackBrowserSpeech();
-          audio.play().catch(() => fallbackBrowserSpeech());
+          audio.onerror = fallbackBrowserSpeech;
+          audio.play().catch(fallbackBrowserSpeech);
         } else {
           fallbackBrowserSpeech();
         }
       })
-      .catch(() => {
-        fallbackBrowserSpeech();
-      });
+      .catch(fallbackBrowserSpeech);
   };
 
-  // Copy NAVTEX
-  const handleCopyNavtex = (item) => {
-    const coords = parseCoordinates(item);
-    const navtexText = [
-      'ZCZC MA01',
-      `COASTAL WARNING / ${item.source?.toUpperCase() || 'MARITIME RESCUE'}`,
-      `NOTICE ID: ${item.id}`,
-      `SECTOR: ${item.place?.toUpperCase()}`,
-      `POSITION: ${coords.lat.toFixed(2)}N ${coords.lon.toFixed(2)}E`,
-      `SEVERITY: ${item.level} PRIORITY`,
-      `DIRECTIVE: ${item.actionRequired}`,
-      `DETAILS: ${item.desc}`,
-      `VALIDITY: UNTIL ${item.validTill}`,
-      'NNNN'
-    ].join('\n');
-
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(navtexText);
-      playMarineTone('beep');
-      showToast(`NAVTEX dispatch telex for ${item.id} copied to clipboard`, 'success');
-    }
-  };
-
-  // Execute Live Fleet Broadcast
-  const handleStartBroadcast = async () => {
-    setBroadcastStep('transmitting');
-    setBroadcastProgress(20);
-    playMarineTone('broadcast');
-
-    setTimeout(() => setBroadcastProgress(55), 500);
-    setTimeout(() => setBroadcastProgress(85), 1100);
-
-    setTimeout(async () => {
-      setBroadcastProgress(100);
-      setBroadcastStep('success');
-      playMarineTone('broadcast');
-
-      const sectorCoords = broadcastSector.includes('Sector 4')
-        ? { lat: 9.75, lon: 76.12, text: "09°45'N, 076°07'E" }
-        : broadcastSector.includes('Munambam')
-        ? { lat: 10.18, lon: 76.15, text: "10°11'N, 076°09'E" }
-        : { lat: 9.97, lon: 76.16, text: "09°58'N, 076°10'E" };
-
-      const newAlert = {
-        id: `ALT-DISPATCH-${Date.now().toString().slice(-4)}`,
-        title: `EMERGENCY FLEET BROADCAST: ${broadcastChannel}`,
-        place: broadcastSector,
-        time: 'Just now',
-        level: broadcastSeverity,
-        category: 'Safety',
-        source: `Coast Guard MRCC • ${broadcastChannel}`,
-        validTill: '24 Hours IST',
-        desc: customNotice,
-        coordinates: sectorCoords.text,
-        lat: sectorCoords.lat,
-        lon: sectorCoords.lon,
-        actionRequired: customNotice,
-        isLive: true,
-        status: 'active'
-      };
-
-      setAlertsList((prev) => [newAlert, ...prev]);
-      showToast(`Fleet broadcast transmitted to 2,480 registered craft via ${broadcastChannel}`, 'success');
-
-      try {
-        await createBackendAlert(newAlert);
-      } catch (_) {}
-    }, 1700);
-  };
-
-  const handleCloseBroadcast = () => {
-    setIsBroadcastModalOpen(false);
-    setBroadcastStep('idle');
-    setBroadcastProgress(0);
-  };
-
-  // Create Notice
   const handleCreateNoticeSubmit = async (e) => {
     e.preventDefault();
     if (!newNoticeTitle.trim()) return;
@@ -333,589 +176,311 @@ export default function AlertsCenterPage() {
     const noticeItem = {
       id: `ALT-NOTICE-${Date.now().toString().slice(-4)}`,
       title: newNoticeTitle.trim(),
-      place: newNoticeSector.trim() || 'Coastal Operating Basin',
+      place: newNoticeSector.trim() || 'Coastal operating area',
       time: 'Just now',
       level: newNoticeSeverity,
-      category: newNoticeCategory,
-      source: 'Port Authority Harbor Master',
-      validTill: '48 Hours IST',
-      desc: newNoticeDesc.trim() || 'General navigational advisory issued for commercial and artisanal vessels.',
+      category: 'Safety',
+      source: 'Port authority harbour master',
+      validTill: '48 hours',
+      desc: newNoticeDesc.trim() || 'General advisory issued for vessels in this area.',
       coordinates: "09°58'N, 076°16'E",
       lat: 9.9667,
-      lon: 76.1650,
-      actionRequired: newNoticeDirective.trim() || 'Exercise enhanced navigational caution and maintain radio watch.',
+      lon: 76.165,
+      actionRequired: newNoticeDirective.trim() || 'Take extra care and keep your radio on.',
       isLive: true,
       status: 'active'
     };
 
-    setAlertsList((prev) => [noticeItem, ...prev]);
+    setAlertsList(prev => [noticeItem, ...prev]);
     setIsCreateNoticeModalOpen(false);
     setNewNoticeTitle('');
     setNewNoticeDesc('');
     setNewNoticeDirective('');
-    playMarineTone('beep');
-    showToast(`Notice ${noticeItem.id} posted successfully to active bulletins`, 'success');
-
-    try {
-      await createBackendAlert(noticeItem);
-    } catch (_) {}
+    showToast('Notice published to the warning list', 'success');
+    try { await createBackendAlert(noticeItem); } catch {}
   };
 
-  // Filter Pipeline
-  const filteredAlerts = alertsList.filter((item) => {
+  const sortedAlerts = useMemo(
+    () => [...alertsList].sort((a, b) => minutesOld(a.time) - minutesOld(b.time)),
+    [alertsList]
+  );
+
+  const visibleAlerts = useMemo(() => sortedAlerts.filter(item => {
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      const matchText = (
-        (item.title || '') +
-        (item.desc || '') +
-        (item.place || '') +
-        (item.coordinates || '') +
-        (item.actionRequired || '') +
-        (item.source || '') +
-        (item.id || '')
-      ).toLowerCase();
-      if (!matchText.includes(q)) return false;
+      const haystack = `${item.title || ''} ${item.desc || ''} ${item.place || ''} ${item.actionRequired || ''} ${item.id || ''}`.toLowerCase();
+      if (!haystack.includes(q)) return false;
     }
-
-    if (activeCategory !== 'All') {
-      if (item.category?.toLowerCase() !== activeCategory.toLowerCase()) {
-        return false;
-      }
-    }
-
-    if (activeSeverity !== 'ALL') {
-      if (activeSeverity === 'HIGH' && item.level !== 'HIGH') return false;
-      if (activeSeverity === 'MEDIUM' && item.level !== 'MEDIUM') return false;
-      if (activeSeverity === 'LOW' && item.level !== 'LOW' && item.level !== 'INFO') return false;
-    }
-
-    if (activeStatus === 'UNREAD' && readAlerts[item.id]) return false;
-    if (activeStatus === 'ACKNOWLEDGED' && !readAlerts[item.id]) return false;
-
+    if (filter === 'SERIOUS' && item.level !== 'HIGH') return false;
+    if (filter === 'UNREAD' && readAlerts[item.id]) return false;
     return true;
-  });
+  }), [sortedAlerts, searchQuery, filter, readAlerts]);
 
-  // KPI Calculations
-  const totalCount = alertsList.length;
-  const highSeverityCount = alertsList.filter((a) => a.level === 'HIGH').length;
-  const pendingAckCount = alertsList.filter((a) => !readAlerts[a.id]).length;
-  const acknowledgedCount = totalCount - pendingAckCount;
+  const unreadCount = sortedAlerts.filter(a => !readAlerts[a.id]).length;
+  const seriousUnread = sortedAlerts.filter(a => a.level === 'HIGH' && !readAlerts[a.id]).length;
+  const newest = sortedAlerts[0];
+
+  const summary = seriousUnread > 0
+    ? {
+        tone: 'avoid',
+        icon: 'AlertOctagon',
+        headline: `${seriousUnread} serious warning${seriousUnread > 1 ? 's' : ''} right now`,
+        line: newest ? `${newest.title} — ${newest.actionRequired}` : 'Read the warnings below before you leave the shore.'
+      }
+    : unreadCount > 0
+      ? {
+          tone: 'caution',
+          icon: 'AlertTriangle',
+          headline: `${unreadCount} warning${unreadCount > 1 ? 's' : ''} to read`,
+          line: newest ? `${newest.title} — ${newest.actionRequired}` : 'Nothing serious, but read the notices below.'
+        }
+      : {
+          tone: 'good',
+          icon: 'CheckCircle2',
+          headline: 'Nothing urgent for your area',
+          line: 'You have read every warning currently in force. We will tell you when a new one arrives.'
+        };
 
   return (
-    <AppShell
-      title={t('alerts.title', 'Maritime Alerts & Warning Center')}
-      subtitle={t('alerts.subtitle', 'Multi-Agency Coastal Hazard Warning Network (INCOIS • IMD • NAVAREA VIII)')}
-      actions={
-        <div className="alerts-header-actions">
-          <span className="terminal-status-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <span className={liveHazardsLoaded ? "enc-pulse-dot" : "enc-pulse-dot-amber"} />
-            {liveHazardsLoaded ? `GDACS & INCOIS REAL-TIME (${realCount} ACTIVE)` : 'EDGE BUFFER (OFFLINE)'}
-          </span>
-          <button
-            className="btn secondary btn-sm"
-            onClick={() => loadAlerts(true)}
-            disabled={isRefreshing}
-            title="Re-sync latest advisories from Coast Guard & INCOIS"
-          >
-            <Icon name="RefreshCw" size={13} className={isRefreshing ? "spin-icon" : ""} />
-            <span>{isRefreshing ? t('alerts.syncing', 'Syncing...') : t('alerts.refresh', 'Refresh Feed')}</span>
-          </button>
-          <button className="btn secondary btn-sm" onClick={markAllRead} title="Acknowledge all current notices">
-            <Icon name="CheckCheck" size={13} />
-            <span>{t('alerts.markAllRead', 'Mark All Read')}</span>
-          </button>
-          <button
-            className="btn secondary btn-sm"
-            onClick={() => setIsCreateNoticeModalOpen(true)}
-            title="Create and issue a local maritime notice"
-          >
-            <Icon name="PlusCircle" size={13} />
-            <span>{t('alerts.newNotice', 'New Notice')}</span>
-          </button>
-          <button
-            className="btn primary btn-sm"
-            onClick={() => setIsBroadcastModalOpen(true)}
-            title="Transmit urgent voice/digital broadcast to fleet"
-          >
-            <Icon name="Radio" size={13} />
-            <span>{t('alerts.fleetBroadcast', 'Fleet Emergency Broadcast')}</span>
-          </button>
-        </div>
-      }
-    >
-      {/* Operational KPI Summary Strip */}
-      <div className="alerts-stats-grid">
-        <div className="alert-stat-card">
-          <div className="alert-stat-icon blue">
-            <Icon name="Bell" size={18} />
+    <AppShell>
+      <div className="simple-dash" data-testid="alerts-simple">
+        <div className="simple-head">
+          <div>
+            <span className="ocean-eyebrow" data-testid="alerts-eyebrow">MARINE WARNINGS</span>
+            <h1 data-testid="alerts-heading">{t('plain.alertsTitle', 'What to watch out for')}</h1>
+            <p>
+              {isLive ? `Newest first · updated ${lastSyncTime}` : 'Newest first · sample warnings, not for navigation'}
+            </p>
           </div>
-          <div className="alert-stat-content">
-            <span className="alert-stat-value">{totalCount}</span>
-            <span className="alert-stat-label">{t('alerts.totalBulletins', 'Active Bulletins')}</span>
+          <div className="simple-head-actions">
+            <button
+              type="button"
+              className="pill-badge-btn"
+              onClick={() => loadAlerts(true)}
+              disabled={isRefreshing}
+              data-testid="alerts-refresh-button"
+            >
+              <Icon name="RefreshCw" size={13} className={isRefreshing ? 'spin-icon' : ''} />
+              <span>{isRefreshing ? t('plain.alertsUpdating', 'Updating…') : t('plain.alertsUpdate', 'Update')}</span>
+            </button>
+            <button
+              type="button"
+              className="pill-badge-btn"
+              onClick={markAllRead}
+              data-testid="alerts-mark-all-button"
+            >
+              <Icon name="CheckCheck" size={13} />
+              <span>{t('plain.alertsMarkAll', 'Mark all read')}</span>
+            </button>
           </div>
         </div>
 
-        <div className="alert-stat-card">
-          <div className="alert-stat-icon red">
-            <Icon name="ShieldAlert" size={18} />
+        <section className="simple-verdict" data-tone={summary.tone} data-testid="alerts-summary">
+          <div className="verdict-mark"><Icon name={summary.icon} size={26} strokeWidth={1.8} /></div>
+          <div className="verdict-body">
+            <span className="verdict-kicker">Right now</span>
+            <h2 data-testid="alerts-summary-headline">{summary.headline}</h2>
+            <p data-testid="alerts-summary-line">{summary.line}</p>
           </div>
-          <div className="alert-stat-content">
-            <span className="alert-stat-value">{highSeverityCount}</span>
-            <span className="alert-stat-label">{t('alerts.highHazards', 'High Severity Warnings')}</span>
-          </div>
-        </div>
+        </section>
 
-        <div className="alert-stat-card">
-          <div className="alert-stat-icon orange">
-            <Icon name="Clock" size={18} />
+        <div className="simple-card" data-testid="alerts-list-panel">
+          <div className="simple-card-head">
+            <div>
+              <h3>Warnings for your coast</h3>
+              <p>{visibleAlerts.length} shown{visibleAlerts.length !== sortedAlerts.length ? ` of ${sortedAlerts.length}` : ''}</p>
+            </div>
+            <div className="simple-chips">
+              {[
+                { key: 'ALL', label: 'All' },
+                { key: 'SERIOUS', label: 'Serious only' },
+                { key: 'UNREAD', label: `Unread (${unreadCount})` }
+              ].map(chip => (
+                <button
+                  key={chip.key}
+                  type="button"
+                  className={`simple-chip ${filter === chip.key ? 'active' : ''}`}
+                  onClick={() => setFilter(chip.key)}
+                  aria-pressed={filter === chip.key}
+                  data-testid={`alerts-filter-${chip.key.toLowerCase()}`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="alert-stat-content">
-            <span className="alert-stat-value">{pendingAckCount}</span>
-            <span className="alert-stat-label">{t('alerts.pendingAck', 'Pending Acknowledgment')}</span>
-          </div>
-        </div>
 
-        <div className="alert-stat-card">
-          <div className="alert-stat-icon green">
-            <Icon name="Radio" size={18} />
-          </div>
-          <div className="alert-stat-content">
-            <span className="alert-stat-value">156.800</span>
-            <span className="alert-stat-label">{t('alerts.radioWatch', 'VHF Ch 16 / NAVTEX 518kHz')}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Modern Filter & Search Controls */}
-      <div className="alerts-controls-row">
-        <div className="alerts-search-wrap">
-          <div className="alerts-search-box">
-            <Icon name="Search" size={14} className="alerts-search-icon" />
+          <div className="simple-ask" style={{ marginBottom: '16px' }}>
+            <Icon name="Search" size={15} style={{ color: 'var(--c-text-muted)' }} />
             <input
               type="text"
-              className="alerts-search-input"
               data-testid="alerts-search-input"
-              aria-label="Search marine notices"
-              placeholder={t('alerts.searchPlaceholder', 'Search notices by keyword, sector, coordinates, or source (e.g. Swell, Kochi, NAVAREA)...')}
+              aria-label="Search warnings"
+              placeholder={t('plain.alertsSearch', 'Search by place or keyword…')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             {searchQuery && (
-              <button className="alerts-search-clear" onClick={() => setSearchQuery('')} title="Clear search">
+              <button type="button" className="pill-badge-btn" onClick={() => setSearchQuery('')} data-testid="alerts-search-clear">
                 <Icon name="X" size={13} />
               </button>
             )}
           </div>
+
+          {visibleAlerts.length === 0 ? (
+            <div className="alert-empty" data-testid="alerts-empty-state">
+              <Icon name="CheckCircle2" size={30} style={{ color: 'var(--c-safe, #10b981)' }} />
+              <b>Nothing to show here</b>
+              <p>Try another search, or go back to all warnings.</p>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => { setSearchQuery(''); setFilter('ALL'); }}
+                data-testid="alerts-reset-button"
+              >
+                <Icon name="RotateCcw" size={13} /> <span>Show all warnings</span>
+              </button>
+            </div>
+          ) : (
+            <div className="alert-feed">
+              {visibleAlerts.map((item, idx) => {
+                const level = LEVEL_WORDS[item.level] || LEVEL_WORDS.LOW;
+                const isRead = !!readAlerts[item.id];
+                const isSpeaking = currentlySpeakingId === item.id;
+                const isOpen = expandedId === item.id;
+
+                return (
+                  <article
+                    key={item.id}
+                    className="alert-item"
+                    data-tone={level.tone}
+                    data-read={isRead ? 'true' : 'false'}
+                    data-testid={`alert-item-${idx}`}
+                  >
+                    <div className="alert-item-top">
+                      <span className="alert-level-tag" data-tone={level.tone}>
+                        <Icon name={level.icon} size={12} />
+                        <span>{level.word}</span>
+                      </span>
+                      <span className="alert-time">{idx === 0 ? `Newest · ${item.time}` : item.time}</span>
+                    </div>
+
+                    <h4 data-testid={`alert-title-${idx}`}>{item.title}</h4>
+                    <p className="alert-place"><Icon name="MapPin" size={12} /> {item.place}</p>
+                    <p className="alert-desc">{item.desc}</p>
+
+                    <div className="alert-todo" data-tone={level.tone}>
+                      <span>What to do</span>
+                      <b>{item.actionRequired}</b>
+                    </div>
+
+                    <div className="alert-actions">
+                      <button
+                        type="button"
+                        className="btn secondary btn-sm"
+                        onClick={() => handleSpeakAlert(item)}
+                        data-testid={`alert-listen-${idx}`}
+                      >
+                        <Icon name={isSpeaking ? 'Square' : 'Volume2'} size={12} />
+                        <span>{isSpeaking ? t('plain.alertsStop', 'Stop') : t('plain.alertsListen', 'Listen')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn secondary btn-sm"
+                        onClick={() => handlePlotOnMap(item)}
+                        data-testid={`alert-map-${idx}`}
+                      >
+                        <Icon name="Map" size={12} />
+                        <span>{t('plain.alertsOnMap', 'Show on map')}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn secondary btn-sm"
+                        onClick={() => router.push(`/ai-copilot?q=${encodeURIComponent(`What does ${item.title} near ${item.place} mean for a small boat today?`)}`)}
+                        data-testid={`alert-ask-${idx}`}
+                      >
+                        <Icon name="Bot" size={12} />
+                        <span>Ask ORCA</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn secondary btn-sm"
+                        onClick={() => toggleAcknowledge(item)}
+                        data-testid={`alert-ack-${idx}`}
+                      >
+                        <Icon name={isRead ? 'RotateCcw' : 'Check'} size={12} />
+                        <span>{isRead ? 'Unread' : 'Mark read'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="btn ghost btn-sm"
+                        onClick={() => setExpandedId(isOpen ? null : item.id)}
+                        aria-expanded={isOpen}
+                        data-testid={`alert-details-${idx}`}
+                      >
+                        <Icon name={isOpen ? 'ChevronUp' : 'ChevronDown'} size={12} />
+                        <span>{isOpen ? 'Hide details' : 'Details'}</span>
+                      </button>
+                    </div>
+
+                    {isOpen && (
+                      <div className="alert-meta" data-testid={`alert-meta-${idx}`}>
+                        <div><span>Notice</span><b>{item.id}</b></div>
+                        <div><span>Issued by</span><b>{item.source}</b></div>
+                        <div><span>Position</span><b>{item.coordinates}</b></div>
+                        <div><span>Valid until</span><b>{item.validTill}</b></div>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Category Tabs */}
-        <div className="alerts-tabs-group">
-          {[
-            { key: 'All', label: t('alerts.allNotices', 'All Notices'), count: alertsList.length },
-            { key: 'Safety', label: t('alerts.safetyHarbor', 'Safety & Harbor'), count: alertsList.filter(a => a.category?.toLowerCase() === 'safety').length },
-            { key: 'Weather', label: t('alerts.weatherSwell', 'Weather & Swell'), count: alertsList.filter(a => a.category?.toLowerCase() === 'weather').length },
-            { key: 'Geofence', label: t('alerts.geofencesNaval', 'Geofences & Naval'), count: alertsList.filter(a => a.category?.toLowerCase() === 'geofence').length },
-            { key: 'Fishing', label: t('alerts.pfzAdvisories', 'PFZ Advisories'), count: alertsList.filter(a => a.category?.toLowerCase() === 'fishing').length },
-            { key: 'System', label: t('alerts.telemetryHealth', 'Telemetry Health'), count: alertsList.filter(a => a.category?.toLowerCase() === 'system').length }
-          ].map((tab) => (
+        <div className="simple-card" data-testid="alerts-tools-panel">
+          <div className="simple-card-head">
+            <div>
+              <h3>Harbour tools</h3>
+              <p>For authorities who need to publish a notice.</p>
+            </div>
             <button
-              key={tab.key}
-              data-testid={`alerts-category-${tab.key.toLowerCase()}`}
-              className={`alerts-tab-btn ${activeCategory === tab.key ? 'active' : ''}`}
-              onClick={() => setActiveCategory(tab.key)}
+              type="button"
+              className="pill-badge-btn"
+              onClick={() => setShowTools(prev => !prev)}
+              aria-expanded={showTools}
+              data-testid="alerts-tools-toggle"
             >
-              <span>{tab.label}</span>
-              <span className="alerts-tab-count">({tab.count})</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Secondary Severity and Status Filter Pills */}
-        <div className="alerts-secondary-filters">
-          <div className="filter-group-pills">
-            <span className="filter-pill-label">{t('alerts.severityFilter', 'Severity:')}</span>
-            <button
-              className={`filter-pill-btn ${activeSeverity === 'ALL' ? 'active' : ''}`}
-              onClick={() => setActiveSeverity('ALL')}
-              data-testid="alerts-severity-all"
-            >
-              {t('alerts.allSeverity', 'All')}
-            </button>
-            <button
-              className={`filter-pill-btn ${activeSeverity === 'HIGH' ? 'active-red' : ''}`}
-              onClick={() => setActiveSeverity('HIGH')}
-              data-testid="alerts-severity-high"
-            >
-              <Icon name="Circle" size={9} className="text-hazard" /> {t('alerts.criticalHigh', 'Critical / High')} ({alertsList.filter(a => a.level === 'HIGH').length})
-            </button>
-            <button
-              className={`filter-pill-btn ${activeSeverity === 'MEDIUM' ? 'active-orange' : ''}`}
-              onClick={() => setActiveSeverity('MEDIUM')}
-              data-testid="alerts-severity-medium"
-            >
-              <Icon name="Circle" size={9} className="text-caution" /> {t('alerts.medium', 'Medium')} ({alertsList.filter(a => a.level === 'MEDIUM').length})
-            </button>
-            <button
-              className={`filter-pill-btn ${activeSeverity === 'LOW' ? 'active-blue' : ''}`}
-              onClick={() => setActiveSeverity('LOW')}
-              data-testid="alerts-severity-low"
-            >
-              <Icon name="Circle" size={9} className="text-accent" /> {t('alerts.lowInfo', 'Low / Info')} ({alertsList.filter(a => a.level === 'LOW' || a.level === 'INFO').length})
+              <Icon name={showTools ? 'ChevronUp' : 'Sliders'} size={13} />
+              <span>{showTools ? 'Hide' : 'Open'}</span>
             </button>
           </div>
-
-          <div className="filter-group-pills">
-            <span className="filter-pill-label">{t('alerts.statusFilter', 'Status:')}</span>
-            <button
-              className={`filter-pill-btn ${activeStatus === 'ALL' ? 'active' : ''}`}
-              onClick={() => setActiveStatus('ALL')}
-            >
-              {t('alerts.allStatus', 'All Status')}
-            </button>
-            <button
-              className={`filter-pill-btn ${activeStatus === 'UNREAD' ? 'active-orange' : ''}`}
-              onClick={() => setActiveStatus('UNREAD')}
-            >
-              <Icon name="Zap" size={11} /> {t('alerts.pendingAction', 'Pending Action')} ({pendingAckCount})
-            </button>
-            <button
-              className={`filter-pill-btn ${activeStatus === 'ACKNOWLEDGED' ? 'active-green' : ''}`}
-              onClick={() => setActiveStatus('ACKNOWLEDGED')}
-            >
-              <Icon name="CheckCheck" size={11} /> {t('alerts.acknowledgedTag', 'Acknowledged')} ({acknowledgedCount})
-            </button>
-          </div>
+          {showTools && (
+            <div className="alert-actions" data-testid="alerts-tools-section">
+              <button
+                type="button"
+                className="btn secondary btn-sm"
+                onClick={() => setIsCreateNoticeModalOpen(true)}
+                data-testid="alerts-new-notice-button"
+              >
+                <Icon name="PlusCircle" size={13} />
+                <span>{t('plain.alertsNewNotice', 'Publish a notice')}</span>
+              </button>
+              <span className="simple-note">Published notices appear at the top of the list for everyone.</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Main Alerts Feed Card */}
-      <Card className="alerts-main-card">
-        <div className="alerts-feed-header">
-          <div className="feed-header-left">
-            <Icon name="ShieldAlert" size={18} className="text-caution" />
-            <h3>
-              {t('alerts.activeBulletins', 'Active Regional Bulletins')} ({filteredAlerts.length}
-              {filteredAlerts.length !== alertsList.length && ` of ${alertsList.length}`})
-            </h3>
-          </div>
-          <span className="feed-header-meta">
-            Synchronized at {lastSyncTime} • Marine Inmarsat-C & Coastal VHF
-          </span>
-        </div>
-
-        {filteredAlerts.length === 0 ? (
-          <div className="empty-alerts-state">
-            <Icon name="CheckCircle" size={36} className="text-safe" />
-            <h4>{t('alerts.noMatchingBulletins', 'No Bulletins Match Selected Filters')}</h4>
-            <p style={{ fontSize: '12px' }}>
-              {t('alerts.noMatchingSub', 'Adjust search terms, severity, or clear active category filters.')}
-            </p>
-            <button
-              className="btn secondary btn-sm"
-              onClick={() => {
-                setSearchQuery('');
-                setActiveCategory('All');
-                setActiveSeverity('ALL');
-                setActiveStatus('ALL');
-              }}
-            >
-              <Icon name="RotateCcw" size={12} />
-              <span>{t('alerts.resetFilters', 'Reset All Filters')}</span>
-            </button>
-          </div>
-        ) : (
-          <div className="alerts-full-list">
-            {filteredAlerts.map((item) => {
-              const isAcknowledged = !!readAlerts[item.id];
-              const isSpeaking = currentlySpeakingId === item.id;
-
-              return (
-                <div
-                  key={item.id}
-                  className={`alert-bulletin-card border-${item.level.toLowerCase()} ${isAcknowledged ? 'read' : ''}`}
-                >
-                  <div className="bulletin-card-top">
-                    <div className="bulletin-title-group">
-                      <div className={`bulletin-icon-box bg-${item.level.toLowerCase()}`}>
-                        <Icon
-                          name={
-                            item.category === 'Weather'
-                              ? 'Waves'
-                              : item.category === 'Geofence'
-                              ? 'ShieldAlert'
-                              : item.category === 'Safety'
-                              ? 'LifeBuoy'
-                              : item.category === 'Fishing'
-                              ? 'Fish'
-                              : 'Activity'
-                          }
-                          size={18}
-                        />
-                      </div>
-                      <div>
-                        <div className="bulletin-headline">
-                          <b>{item.title}</b>
-                          <span className="bulletin-place">• {item.place}</span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-                          <span className="bulletin-id-tag">{item.id} • {item.source}</span>
-                          {isAcknowledged && (
-                            <span className="alerts-ack-status-tag">
-                              <Icon name="Check" size={10} />
-                              <span>{t('alerts.acknowledgedTag', 'ACKNOWLEDGED')}</span>
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bulletin-badges-group">
-                      <Badge tone={item.level === 'HIGH' ? 'red' : item.level === 'MEDIUM' ? 'orange' : 'blue'}>
-                        {item.level} SEVERITY
-                      </Badge>
-                      <span className="bulletin-time">{item.time}</span>
-                    </div>
-                  </div>
-
-                  <p className="bulletin-desc-p">{item.desc}</p>
-
-                  <div className="bulletin-details-row">
-                    <div className="detail-chip" title="Click to copy sector fix" onClick={() => {
-                      if (navigator.clipboard) {
-                        navigator.clipboard.writeText(item.coordinates || '');
-                        showToast(`Sector coordinates ${item.coordinates} copied`, 'success');
-                      }
-                    }} style={{ cursor: 'pointer' }}>
-                      <Icon name="MapPin" size={12} />
-                      <span>Sector: <code>{item.coordinates}</code></span>
-                    </div>
-                    <div className="detail-chip">
-                      <Icon name="Clock" size={12} />
-                      <span>{t('alerts.validUntil', 'Valid Until:')} <b>{item.validTill}</b></span>
-                    </div>
-                    <div className="detail-chip">
-                      <Icon name="AlertCircle" size={12} className="text-hazard" />
-                      <span>{t('alerts.directive', 'Directive:')} <b className="text-hazard">{item.actionRequired}</b></span>
-                    </div>
-                  </div>
-
-                  <div className="bulletin-card-footer">
-                    <div className="bulletin-actions-left" style={{ flexWrap: 'wrap' }}>
-                      <button
-                        className="btn secondary btn-sm"
-                        onClick={() => handlePlotOnMap(item)}
-                        title="Jump to this hazard on the 16-layer Marine GIS Map"
-                      >
-                        <Icon name="Map" size={12} />
-                        <span>{t('alerts.plotOnMap', 'Plot on Marine Map')}</span>
-                      </button>
-
-                      <button
-                        className="btn secondary btn-sm"
-                        onClick={() => router.push(`/ai-copilot?q=${encodeURIComponent(`Analyze the navigational impact and safety directives of ${item.id} (${item.title}) for craft operating near ${item.place}.`)}`)}
-                        title="Query AI Copilot for autonomous route hazard breakdown"
-                      >
-                        <Icon name="Bot" size={12} />
-                        <span>{t('alerts.copilotAssessment', 'Copilot Assessment')}</span>
-                      </button>
-
-                      <button
-                        className={`btn secondary btn-sm ${isSpeaking ? 'active' : ''}`}
-                        onClick={() => handleSpeakAlert(item)}
-                        title="Listen to advisory spoken aloud in active language"
-                      >
-                        {isSpeaking ? (
-                          <>
-                            <div className="audio-equalizer">
-                              <span className="audio-bar" />
-                              <span className="audio-bar" />
-                              <span className="audio-bar" />
-                            </div>
-                            <span style={{ color: '#38bdf8' }}>{t('alerts.stopAudio', 'Stop Audio')}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Icon name="Volume2" size={12} />
-                            <span>{t('alerts.readAdvisory', 'Listen Advisory')}</span>
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        className="btn secondary btn-sm"
-                        onClick={() => handleCopyNavtex(item)}
-                        title="Copy official NAVTEX telex dispatch message"
-                      >
-                        <Icon name="Copy" size={12} />
-                        <span>{t('alerts.copyNavtex', 'Copy NAVTEX')}</span>
-                      </button>
-                    </div>
-
-                    <button
-                      className="btn-text-subtle"
-                      onClick={() => toggleAcknowledge(item)}
-                    >
-                      {isAcknowledged ? t('alerts.reopenNotice', 'Mark as Unacknowledged') : t('alerts.acknowledge', 'Acknowledge Bulletin')}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Card>
-
-      {/* Real Emergency Fleet Broadcast Modal */}
-      {isBroadcastModalOpen && (
-        <div className="maritime-modal-overlay" onClick={handleCloseBroadcast}>
-          <div className="maritime-modal-window" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header-bar">
-              <div className="modal-header-title">
-                <Icon name="Radio" size={18} className="text-hazard" />
-                <span>COASTAL EMERGENCY BROADCAST CONSOLE</span>
-              </div>
-              <button className="modal-close-btn" onClick={handleCloseBroadcast}>
-                <Icon name="X" size={16} />
-              </button>
-            </div>
-
-            <div className="modal-body-content">
-              <div className="broadcast-status-banner">
-                <span className="live-radar-dot" />
-                <span>GATEWAY LINK: INDIAN COAST GUARD MRCC KOCHI • SATELLITE MSS ACTIVE</span>
-              </div>
-
-              <div className="broadcast-form-grid">
-                <div className="b-field">
-                  <label>TRANSMISSION CHANNELS:</label>
-                  <div className="b-channel-pills">
-                    {['ALL', 'VHF DSC Ch 70', 'NAVTEX 518 kHz', 'MSS S-Band', 'Coastal SMS Gateway'].map((ch) => (
-                      <button
-                        key={ch}
-                        type="button"
-                        className={`b-pill ${broadcastChannel === ch ? 'active' : ''}`}
-                        onClick={() => setBroadcastChannel(ch)}
-                        disabled={broadcastStep === 'transmitting'}
-                      >
-                        {ch}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="b-field">
-                  <label>ALERT SEVERITY LEVEL:</label>
-                  <div className="b-channel-pills">
-                    {[
-                      { id: 'HIGH', label: '🔴 CRITICAL EMERGENCY (Immediate Divert)' },
-                      { id: 'MEDIUM', label: '🟠 WARNING (Moderate Hazard)' },
-                      { id: 'LOW', label: '🔵 ADVISORY (Informational)' }
-                    ].map((lvl) => (
-                      <button
-                        key={lvl.id}
-                        type="button"
-                        className={`b-pill ${broadcastSeverity === lvl.id ? 'active' : ''}`}
-                        onClick={() => setBroadcastSeverity(lvl.id)}
-                        disabled={broadcastStep === 'transmitting'}
-                      >
-                        {lvl.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="b-field">
-                  <label>TARGET COVERAGE SECTOR:</label>
-                  <select
-                    value={broadcastSector}
-                    onChange={(e) => setBroadcastSector(e.target.value)}
-                    disabled={broadcastStep === 'transmitting'}
-                  >
-                    <option value="Sector 4 (Kochi to Alappuzha 50 NM Offshore)">Sector 4 (Kochi to Alappuzha 50 NM Offshore)</option>
-                    <option value="Munambam Coastal Basin (30 NM Inshore)">Munambam Coastal Basin (30 NM Inshore)</option>
-                    <option value="Lakshadweep Sea Transit Corridor">Lakshadweep Sea Transit Corridor</option>
-                    <option value="All Southern Arabian Sea Craft (100 NM)">All Southern Arabian Sea Craft (100 NM)</option>
-                  </select>
-                </div>
-
-                <div className="b-field">
-                  <label>EMERGENCY DISPATCH DIRECTIVE:</label>
-                  <textarea
-                    rows={3}
-                    value={customNotice}
-                    onChange={(e) => setCustomNotice(e.target.value)}
-                    disabled={broadcastStep === 'transmitting'}
-                  />
-                </div>
-
-                <div className="b-meta-summary">
-                  <div className="meta-box">
-                    <span>REGISTERED CRAFT:</span>
-                    <b>2,480 Vessels</b>
-                  </div>
-                  <div className="meta-box">
-                    <span>FREQUENCY:</span>
-                    <b>156.525 MHz / S-Band</b>
-                  </div>
-                  <div className="meta-box">
-                    <span>SECURITY HASH:</span>
-                    <code>SHA256: 9b8f..41c</code>
-                  </div>
-                </div>
-
-                {broadcastStep !== 'idle' && (
-                  <div className="b-progress-zone">
-                    <div className="b-progress-header">
-                      <span>{broadcastStep === 'transmitting' ? 'Uplinking to Coastal Transponders...' : '✅ BROADCAST CONFIRMED'}</span>
-                      <b>{broadcastProgress}%</b>
-                    </div>
-                    <div className="b-progress-track">
-                      <div className="b-progress-fill" style={{ width: `${broadcastProgress}%` }} />
-                    </div>
-                    {broadcastStep === 'success' && (
-                      <div className="b-success-alert">
-                        <Icon name="CheckCircle" size={16} className="text-safe" />
-                        <span>Emergency transmission acknowledged by 2,480 marine transponders and Coast Guard MRCC. Bulletin added to live feed.</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="modal-footer-bar">
-              <button className="btn secondary" onClick={handleCloseBroadcast}>
-                Close
-              </button>
-              {broadcastStep !== 'success' ? (
-                <button
-                  className="btn primary"
-                  onClick={handleStartBroadcast}
-                  disabled={broadcastStep === 'transmitting'}
-                >
-                  <Icon name="Send" size={14} />
-                  <span>{broadcastStep === 'transmitting' ? 'Transmitting Fleet Burst...' : 'Transmit Live Fleet Broadcast'}</span>
-                </button>
-              ) : (
-                <button className="btn primary" onClick={handleCloseBroadcast}>
-                  Done
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Create New Maritime Notice Modal */}
       {isCreateNoticeModalOpen && (
         <div className="maritime-modal-overlay" onClick={() => setIsCreateNoticeModalOpen(false)}>
           <div className="maritime-modal-window" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-bar">
               <div className="modal-header-title">
-                <Icon name="PlusCircle" size={18} className="text-safe" />
-                <span>ISSUE NEW MARITIME NOTICE</span>
+                <Icon name="PlusCircle" size={18} />
+                <span>Publish a notice</span>
               </div>
-              <button className="modal-close-btn" onClick={() => setIsCreateNoticeModalOpen(false)}>
+              <button className="modal-close-btn" onClick={() => setIsCreateNoticeModalOpen(false)} data-testid="alerts-notice-close">
                 <Icon name="X" size={16} />
               </button>
             </div>
@@ -924,79 +489,62 @@ export default function AlertsCenterPage() {
               <div className="modal-body-content">
                 <div className="broadcast-form-grid">
                   <div className="b-field">
-                    <label>NOTICE HEADLINE / TITLE:</label>
+                    <label>What is happening?</label>
                     <input
                       type="text"
-                      className="alerts-search-input"
                       required
-                      placeholder="e.g. Fairway Buoy Fl(2) 10s Extinguished"
+                      placeholder="e.g. Fairway buoy light not working"
                       value={newNoticeTitle}
                       onChange={(e) => setNewNoticeTitle(e.target.value)}
+                      data-testid="alerts-notice-title"
                     />
                   </div>
-
-                  <div className="b-field" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <div>
-                      <label>CATEGORY:</label>
-                      <select value={newNoticeCategory} onChange={(e) => setNewNoticeCategory(e.target.value)}>
-                        <option value="Safety">Safety & Harbor</option>
-                        <option value="Weather">Weather & Swell</option>
-                        <option value="Geofence">Geofences & Naval</option>
-                        <option value="Fishing">PFZ Advisories</option>
-                        <option value="System">Telemetry Health</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label>SEVERITY LEVEL:</label>
-                      <select value={newNoticeSeverity} onChange={(e) => setNewNoticeSeverity(e.target.value)}>
-                        <option value="HIGH">HIGH (Critical)</option>
-                        <option value="MEDIUM">MEDIUM (Caution)</option>
-                        <option value="LOW">LOW (Informational)</option>
-                      </select>
-                    </div>
-                  </div>
-
                   <div className="b-field">
-                    <label>OPERATING SECTOR / LOCATION:</label>
+                    <label>How serious is it?</label>
+                    <select value={newNoticeSeverity} onChange={(e) => setNewNoticeSeverity(e.target.value)} data-testid="alerts-notice-severity">
+                      <option value="HIGH">Serious</option>
+                      <option value="MEDIUM">Be careful</option>
+                      <option value="LOW">For information</option>
+                    </select>
+                  </div>
+                  <div className="b-field">
+                    <label>Where?</label>
                     <input
                       type="text"
-                      className="alerts-search-input"
-                      placeholder="e.g. Cochin Channel Bar Mouth (09°58'N, 076°14'E)"
+                      placeholder="e.g. Cochin channel bar mouth"
                       value={newNoticeSector}
                       onChange={(e) => setNewNoticeSector(e.target.value)}
+                      data-testid="alerts-notice-place"
                     />
                   </div>
-
                   <div className="b-field">
-                    <label>DIRECTIVE / REQUIRED MARINER ACTION:</label>
+                    <label>What should people do?</label>
                     <input
                       type="text"
-                      className="alerts-search-input"
-                      placeholder="e.g. Maintain 0.5 NM clearance, transit with lookout"
+                      placeholder="e.g. Keep half a mile clear and post a lookout"
                       value={newNoticeDirective}
                       onChange={(e) => setNewNoticeDirective(e.target.value)}
+                      data-testid="alerts-notice-directive"
                     />
                   </div>
-
                   <div className="b-field">
-                    <label>FULL BULLETIN DESCRIPTION:</label>
+                    <label>Anything else to add?</label>
                     <textarea
                       rows={3}
-                      placeholder="Describe the navigational condition or temporary hazard in detail..."
+                      placeholder="Describe the situation in plain words…"
                       value={newNoticeDesc}
                       onChange={(e) => setNewNoticeDesc(e.target.value)}
+                      data-testid="alerts-notice-desc"
                     />
                   </div>
                 </div>
               </div>
 
               <div className="modal-footer-bar">
-                <button type="button" className="btn secondary" onClick={() => setIsCreateNoticeModalOpen(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn primary">
+                <button type="button" className="btn secondary" onClick={() => setIsCreateNoticeModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn primary" data-testid="alerts-notice-submit">
                   <Icon name="Check" size={14} />
-                  <span>Publish Notice</span>
+                  <span>Publish</span>
                 </button>
               </div>
             </form>
@@ -1004,16 +552,12 @@ export default function AlertsCenterPage() {
         </div>
       )}
 
-      {/* Floating Toast Feedback Notifications */}
       {toasts.length > 0 && (
         <div className="alert-toast-container">
-          {toasts.map((t) => (
-            <div key={t.id} className={`alert-toast ${t.type}`}>
-              <Icon
-                name={t.type === 'success' ? 'CheckCircle' : t.type === 'warning' ? 'AlertTriangle' : 'Info'}
-                size={16}
-              />
-              <span>{t.message}</span>
+          {toasts.map(toast => (
+            <div key={toast.id} className={`alert-toast ${toast.type}`}>
+              <Icon name={toast.type === 'success' ? 'CheckCircle' : 'AlertTriangle'} size={16} />
+              <span>{toast.message}</span>
             </div>
           ))}
         </div>

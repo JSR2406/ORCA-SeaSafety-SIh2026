@@ -1,0 +1,96 @@
+# ==============================================================================
+# ORCA Monorepo .gitignore
+# ==============================================================================
+
+# Git backups
+.git_backups/
+
+# Node & Frontend Build Artifacts
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.next/
+**/.next/
+out/
+**/out/
+build/
+**/build/
+*.tsbuildinfo
+*.tsbuildinfo.*
+next-env.d.ts
+
+# Python & Backend Artifacts
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+develop-eggs/
+eggs/
+.eggs/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environments
+venv/
+**/venv/
+.venv/
+**/.venv/
+env/
+**/env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Variables & Secrets (CRITICAL: Never commit credentials)
+.env
+**/.env
+.env.local
+**/.env.local
+.env.*.local
+**/.env.*.local
+*.local
+!.env.example
+!**/.env.example
+
+# Testing & Linting
+.pytest_cache/
+**/.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs & Temporary files
+*.log
+logs/
+*.tmp
+*.temp
+E1.txt
+
+# Local development / developer agent notes
+local.py
+dev.py
+.agent/
+AGENTS.md
+CLAUDE.md
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Backend specific cached data & ML outputs
+orca-backend/data/cached/*.parquet
+orca-backend/data/cached/*.json
+!orca-backend/data/cached/.gitkeep
+orca-backend/data/ml/

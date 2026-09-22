@@ -1,0 +1,297 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import Icon from './Icon';
+import Logo from './Logo';
+import { navGroups } from '../data/mock';
+import { useLanguage } from '../context/LanguageContext';
+
+const GROUP_TRANSLATION_KEYS = {
+  'CORE OPERATIONS': 'navGroup.operations',
+  'TOOLS & INTELLIGENCE': 'navGroup.tools',
+  'TECHNICAL': 'navGroup.technical',
+};
+
+const NAV_ITEM_TRANSLATION_KEYS = {
+  '/dashboard': 'nav.dashboard',
+  '/ai-copilot': 'nav.copilot',
+  '/fishing': 'nav.fishing',
+  '/safety': 'nav.safety',
+  '/routes': 'nav.routes',
+  '/alerts': 'nav.alerts',
+  '/marine-map': 'nav.marineMap',
+  '/marine-explorer': 'nav.marineExplorer',
+  '/multilingual': 'nav.multilingual',
+  '/knowledge': 'nav.knowledge',
+  '/scenarios': 'nav.scenarios',
+  '/analytics': 'nav.analytics',
+  '/ml-governance': 'nav.mlGovernance',
+  '/system-health': 'nav.systemHealth',
+  '/workflow': 'nav.workflow',
+  '/mobile': 'nav.mobile',
+};
+
+export default function Sidebar({
+  isCollapsed = false,
+  onToggleCollapse,
+  mobileOpen = false,
+  onMobileClose
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { t } = useLanguage();
+
+  // Check if current route is inside the technical/collapsible group
+  const isTechnicalRoute = navGroups
+    .find(g => g.collapsible)
+    ?.items.some(item => pathname === item.path);
+
+  const [techExpanded, setTechExpanded] = useState(true);
+
+  useEffect(() => {
+    if (isTechnicalRoute) {
+      setTechExpanded(true);
+    }
+  }, [isTechnicalRoute]);
+
+  const handleNavClick = () => {
+    if (onMobileClose) {
+      onMobileClose();
+    }
+  };
+
+  return (
+    <>
+      {/* Mobile Backdrop Overlay */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            className="sidebar-mobile-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={onMobileClose}
+          />
+        )}
+      </AnimatePresence>
+
+      <aside
+        className={`sidebar ${isCollapsed ? 'sidebar--collapsed' : ''} ${
+          mobileOpen ? 'sidebar--mobile-open' : ''
+        }`}
+      >
+        {/* Top Header with Logo and Collapse/Close controls */}
+        <div className="side-top">
+          <Link href="/" className="side-top-brand" onClick={handleNavClick}>
+            <Logo compact={isCollapsed} />
+          </Link>
+
+          <div className="side-top-actions">
+            {/* Desktop Rail Collapse Toggle - visible only when expanded */}
+            {onToggleCollapse && !isCollapsed && (
+              <button
+                type="button"
+                className="side-rail-toggle desktop-only"
+                onClick={onToggleCollapse}
+                title="Collapse Navigation (Rail Mode)"
+                aria-label="Collapse sidebar"
+              >
+                <Icon name="PanelLeftClose" size={15} />
+              </button>
+            )}
+
+            {/* Mobile Close Button */}
+            {onMobileClose && (
+              <button
+                type="button"
+                className="side-mobile-close mobile-only"
+                onClick={onMobileClose}
+                aria-label="Close menu"
+              >
+                <Icon name="X" size={18} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation List */}
+        <nav className="side-nav">
+          {navGroups.map((group) => {
+            const isCollapsible = group.collapsible;
+            const isExpanded = !isCollapsible || techExpanded;
+
+            return (
+              <div key={group.label} className="nav-group">
+                {/* Group Heading */}
+                {!isCollapsed && (
+                  <div
+                    className={`nav-group-label ${isCollapsible ? 'nav-group-label--toggle' : ''}`}
+                    onClick={isCollapsible ? () => setTechExpanded((v) => !v) : undefined}
+                    role={isCollapsible ? 'button' : undefined}
+                    tabIndex={isCollapsible ? 0 : undefined}
+                    onKeyDown={
+                      isCollapsible
+                        ? (e) => e.key === 'Enter' && setTechExpanded((v) => !v)
+                        : undefined
+                    }
+                  >
+                    <span>{t(GROUP_TRANSLATION_KEYS[group.label] || group.label, group.label)}</span>
+                    {isCollapsible && (
+                      <span className={`nav-group-chevron ${techExpanded ? 'open' : ''}`}>
+                        <Icon name="ChevronDown" size={11} strokeWidth={2.5} />
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Collapsed mode group divider */}
+                {isCollapsed && <div className="nav-group-divider" />}
+
+                {/* Items */}
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      className="nav-group-items"
+                      initial={isCollapsible ? { height: 0, opacity: 0 } : false}
+                      animate={isCollapsible ? { height: 'auto', opacity: 1 } : false}
+                      exit={isCollapsible ? { height: 0, opacity: 0 } : false}
+                      transition={{ duration: 0.18, ease: 'easeInOut' }}
+                    >
+                      {group.items.map((item) => {
+                        const isActive = pathname === item.path;
+                        const translatedLabel = t(NAV_ITEM_TRANSLATION_KEYS[item.path] || item.label, item.label);
+
+                        return (
+                          <div key={item.path} className="nav-item-wrapper">
+                            <Link
+                              href={item.path}
+                              onClick={handleNavClick}
+                              className={`nav-item ${isActive ? 'active' : ''}`}
+                              title={isCollapsed ? translatedLabel : undefined}
+                            >
+                              {/* Sliding Active Pill */}
+                              {isActive && (
+                                <motion.div
+                                  layoutId="sidebarActivePill"
+                                  className="nav-item-active-pill"
+                                  transition={{
+                                    type: 'spring',
+                                    stiffness: 380,
+                                    damping: 32
+                                  }}
+                                />
+                              )}
+
+                              <span className="nav-item-icon">
+                                <Icon name={item.icon} size={16} strokeWidth={2} />
+                              </span>
+
+                              {!isCollapsed && (
+                                <>
+                                  <span className="nav-item-label">{translatedLabel}</span>
+                                  {item.badge && (
+                                    <span
+                                      className={`nav-badge ${
+                                        item.badge === 'LIVE' ? 'live' : ''
+                                      } ${item.badge === 'AI' ? 'ai' : ''}`}
+                                    >
+                                      {item.badge === 'LIVE' && (
+                                        <span className="nav-badge-pulse" />
+                                      )}
+                                      {item.badge}
+                                    </span>
+                                  )}
+                                </>
+                              )}
+
+                              {isCollapsed && item.badge === 'LIVE' && (
+                                <span className="nav-collapsed-dot" />
+                              )}
+                            </Link>
+
+                            {/* Floating Tooltip in Rail Mode */}
+                            {isCollapsed && (
+                              <div className="nav-rail-tooltip">
+                                <span className="tooltip-text">{translatedLabel}</span>
+                                {item.badge && (
+                                  <span className="tooltip-badge">{item.badge}</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Intelligence Pro Promo Card (Matching Reference) */}
+        {!isCollapsed && (
+          <div className="sidebar-promo-card">
+            <div className="promo-card-icon">
+              <Icon name="Sparkles" size={15} />
+            </div>
+            <b className="promo-card-title">{t('nav.promoTitle', 'ORCA Cognitive Pro')}</b>
+            <p className="promo-card-desc">{t('nav.promoDesc', 'Deep hydrodynamic fusion & SAR satellite telemetry.')}</p>
+            <button
+              type="button"
+              className="promo-card-btn"
+              onClick={() => router.push('/ai-copilot')}
+            >
+              <span>{t('nav.consultCopilot', 'Consult Copilot')}</span>
+            </button>
+          </div>
+        )}
+
+        {/* User Mini Profile at bottom */}
+        <div className="side-bottom">
+          <div
+            className={`user-mini ${isCollapsed ? 'user-mini--collapsed' : ''}`}
+            onClick={() => router.push('/settings')}
+            title="Dr. Ananya Kumar (Principal Oceanographer) — Click for Settings"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                router.push('/settings');
+              }
+            }}
+          >
+            <div className="avatar">
+              <span>AK</span>
+              <span className="avatar-online" title="Telemetry Linked" />
+            </div>
+
+            {!isCollapsed && (
+              <>
+                <div className="user-mini-info">
+                  <b>Dr. Ananya Kumar</b>
+                  <span>{t('nav.userRole', 'Oceanographer • INCOIS')}</span>
+                </div>
+                <button
+                  type="button"
+                  className="user-mini-action"
+                  title="Profile & Telemetry Settings"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push('/settings');
+                  }}
+                >
+                  <Icon name="SlidersHorizontal" size={14} />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}

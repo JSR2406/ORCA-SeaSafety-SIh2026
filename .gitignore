@@ -94,3 +94,9 @@ orca-backend/data/cached/*.parquet
 orca-backend/data/cached/*.json
 !orca-backend/data/cached/.gitkeep
 orca-backend/data/ml/
+.env.*
+*.env
+credentials.json
+*.pem
+*.key
+.credentials

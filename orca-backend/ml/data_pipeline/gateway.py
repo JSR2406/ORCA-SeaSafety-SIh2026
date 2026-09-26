@@ -43,7 +43,7 @@ def get_marine_features(lat: float, lon: float, valid_time: datetime,
     if missing:
         try:
             from ml.data_pipeline.scrapers.incois_thredds import extract_point
-            th = extract_point(lat, lon, timeout_s=12.0)
+            th = extract_point(lat, lon, timeout_s=8.0)
             records.append({"source": "INCOIS-THREDDS", "quality": th.get("quality"),
                             "retrieval_time": th.get("retrieval_time")})
             for k in missing:

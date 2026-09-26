@@ -1,0 +1,17 @@
+# ORCA training / local-dev extras. Install alongside requirements.txt:
+#   pip install -r requirements.txt -r requirements-ml.txt
+# Never needed on Vercel (predict-time only needs sklearn + xgboost).
+uvicorn[standard]
+langchain
+langsmith
+asyncpg
+pgvector
+lightgbm
+geopandas
+pandas
+numpy
+scikit-learn
+xgboost
+shap
+xarray
+pytest

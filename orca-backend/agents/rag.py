@@ -29,7 +29,7 @@ def get_rag_llm() -> ChatOpenAI:
             "X-Title": "ORCA Marine Intelligence"
         },
         temperature=0.0,
-        request_timeout=6.0,
+        request_timeout=float(os.getenv("ORCA_LLM_TIMEOUT_S", "6.0")),
         max_retries=0
     )
 

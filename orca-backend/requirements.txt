@@ -1,23 +1,13 @@
+# ORCA backend RUNTIME deps (Vercel serverless — must stay well under the function bundle cap).
+# NOTE: production XGB .joblib bundles need xgboost+sklearn to unpickle; those live in
+# requirements-ml.txt, so Vercel serves the deterministic v1.2.0 baselines (predict.py
+# falls back gracefully). Full XGB inference runs locally / on Docker with -ml installed.
 fastapi
-uvicorn[standard]
 langgraph
-langchain
 langchain-openai
-langsmith
 supabase
-asyncpg
-pgvector
 pydantic
 pydantic-settings
 python-dotenv
-xgboost
-lightgbm
-geopandas
-scikit-learn
 joblib
 httpx
-pandas
-numpy
-shap
-xarray
-pytest

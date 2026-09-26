@@ -52,18 +52,19 @@ async def process_query(request: ChatRequest):
     
     try:
         # 2. Invoke the graph without blocking the async event loop.
-        # Cap raised 20s -> 45s: the graph now performs real network I/O
-        # (Open-Meteo fetch + LLM calls with their own timeouts + fallback).
+        # Cap 55s: serverless function allows 60s; the graph performs real
+        # network I/O (THREDDS/Open-Meteo fetch + LLM calls with their own
+        # timeouts + deterministic fallback). Cold starts need the headroom.
         print(f"[API] Received query: {user_query}", flush=True)
         try:
             result = await asyncio.wait_for(
                 asyncio.to_thread(langgraph_app.invoke, initial_state),
-                timeout=45.0
+                timeout=55.0
             )
             final_answer = result.get("final_response", "Error: No response generated.")
             intent_detected = result.get("intent_type", "simple")
         except asyncio.TimeoutError:
-            print("[API Warning] Graph processing exceeded 45s, generating immediate grounded response...", flush=True)
+            print("[API Warning] Graph processing exceeded 55s, generating immediate grounded response...", flush=True)
             loc_str = f"({request.lat:.2f}°N, {request.lon:.2f}°E)"
             final_answer = (
                 f"Maritime telemetry for {loc_str}: Ocean conditions indicate moderate swell (1.3m - 1.5m), "

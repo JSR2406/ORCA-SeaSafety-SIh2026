@@ -1,0 +1,6 @@
+{
+  "functions": {
+    "api/server.py": { "maxDuration": 60, "memory": 1024 }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/server" }]
+}

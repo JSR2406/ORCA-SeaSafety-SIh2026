@@ -30,7 +30,7 @@ def get_router_llm() -> ChatOpenAI:
         },
         temperature=0.0, # Must be deterministic for routing
         max_tokens=300,
-        request_timeout=6.0,
+        request_timeout=float(os.getenv("ORCA_LLM_TIMEOUT_S", "6.0")),
         max_retries=0
     )
 

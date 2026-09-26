@@ -22,7 +22,7 @@ def get_generator_llm() -> ChatOpenAI:
         },
         temperature=0.3,
         max_tokens=800,
-        request_timeout=8.0,
+        request_timeout=float(os.getenv("ORCA_LLM_TIMEOUT_S", "8.0")),
         max_retries=0
     )
 
@@ -177,8 +177,14 @@ Do not invent emergency hazards. Answer directly without showing scratchpad or t
         if "</think>" in content:
             content = content.split("</think>")[-1].strip()
             
-        # Clean reasoning model thinking traces (e.g., Nemotron, DeepSeek R1)
-        if "Here's a thinking process:" in content or "Here is a thinking process:" in content:
+        # Clean reasoning-model thinking traces (e.g., Nemotron, DeepSeek R1).
+        # Some traces have no closing marker: if a "thinking process" preamble is
+        # present, drop everything up to the first markdown-heading paragraph.
+        head = content[:600].lower()
+        if "thinking process" in head:
+            idx = content.find("\n**")
+            if idx > 0:
+                content = content[idx:].lstrip()
             for marker in ["**Final Response:**", "Final Response:", "Final Answer:", "### Directive:", "**Directive:**", "### Maritime Advisory:", "**Maritime Advisory:**"]:
                 if marker in content:
                     content = content.split(marker)[-1].strip()

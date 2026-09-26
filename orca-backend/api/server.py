@@ -35,3 +35,25 @@ def health_check():
         "version": "1.0.0",
         "database": "connected"
     }
+
+@app.get("/")
+def root():
+    """Landing index so the bare domain never 404s."""
+    return {
+        "system": "ORCA Multi-Agent Backend",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "health": "/api/v1/health",
+        "endpoints": [
+            "POST /api/v1/chat",
+            "POST /api/v1/ml/fishing/predict",
+            "POST /api/v1/ml/risk/predict",
+            "POST /api/v1/risk/evaluate",
+            "POST /api/v1/route/optimize",
+            "POST /api/v1/route/analyze",
+            "GET /api/v1/geofence/check?lat&lon",
+            "GET /api/v1/alerts",
+            "POST /api/v1/alerts/dispatch-sms",
+            "GET /api/v1/alerts/sms-log"
+        ]
+    }

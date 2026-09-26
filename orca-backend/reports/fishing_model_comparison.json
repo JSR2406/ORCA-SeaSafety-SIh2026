@@ -1,0 +1,391 @@
+{
+  "candidates": [
+    "logreg",
+    "random_forest",
+    "xgboost",
+    "lightgbm"
+  ],
+  "features": [
+    "lat",
+    "lon",
+    "sst_c",
+    "chlorophyll",
+    "wind_speed_ms",
+    "wind_direction_deg",
+    "current_speed_ms",
+    "current_direction_deg",
+    "wave_height_m",
+    "depth_m",
+    "distance_from_coast_km",
+    "month",
+    "season_idx",
+    "hour"
+  ],
+  "train_n": 200,
+  "valid_n": 80,
+  "test_n": 80,
+  "split_policy": "time-based; random split alone insufficient",
+  "ranking_by_pr_auc": [
+    "logreg",
+    "random_forest",
+    "xgboost",
+    "lightgbm"
+  ],
+  "best": "logreg",
+  "results": {
+    "logreg": {
+      "metrics_valid": {
+        "roc_auc": 0.6531,
+        "pr_auc": 0.6277,
+        "f1": 0.6667,
+        "precision": 0.5849,
+        "recall": 0.775,
+        "brier": 0.2352,
+        "confusion_matrix": [
+          [
+            18,
+            22
+          ],
+          [
+            9,
+            31
+          ]
+        ],
+        "calibration": [
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "mean_pred": 0.366,
+            "mean_obs": 0.182,
+            "n": 11
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "mean_pred": 0.518,
+            "mean_obs": 0.509,
+            "n": 53
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "mean_pred": 0.644,
+            "mean_obs": 0.688,
+            "n": 16
+          }
+        ]
+      },
+      "features": [
+        "lat",
+        "lon",
+        "sst_c",
+        "chlorophyll",
+        "wind_speed_ms",
+        "wind_direction_deg",
+        "current_speed_ms",
+        "current_direction_deg",
+        "wave_height_m",
+        "depth_m",
+        "distance_from_coast_km",
+        "month",
+        "season_idx",
+        "hour"
+      ],
+      "metrics_test": {
+        "roc_auc": 0.5938,
+        "pr_auc": 0.574,
+        "f1": 0.5542,
+        "precision": 0.5349,
+        "recall": 0.575,
+        "brier": 0.2454,
+        "confusion_matrix": [
+          [
+            20,
+            20
+          ],
+          [
+            17,
+            23
+          ]
+        ],
+        "calibration": [
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "mean_pred": 0.355,
+            "mean_obs": 0.385,
+            "n": 13
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "mean_pred": 0.509,
+            "mean_obs": 0.525,
+            "n": 59
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "mean_pred": 0.645,
+            "mean_obs": 0.5,
+            "n": 8
+          }
+        ]
+      }
+    },
+    "random_forest": {
+      "metrics_valid": {
+        "roc_auc": 0.5981,
+        "pr_auc": 0.5841,
+        "f1": 0.6098,
+        "precision": 0.5952,
+        "recall": 0.625,
+        "brier": 0.241,
+        "confusion_matrix": [
+          [
+            23,
+            17
+          ],
+          [
+            15,
+            25
+          ]
+        ],
+        "calibration": [
+          {
+            "bin": [
+              0,
+              0.2
+            ],
+            "mean_pred": 0.18,
+            "mean_obs": 0.0,
+            "n": 1
+          },
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "mean_pred": 0.345,
+            "mean_obs": 0.375,
+            "n": 8
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "mean_pred": 0.503,
+            "mean_obs": 0.517,
+            "n": 58
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "mean_pred": 0.662,
+            "mean_obs": 0.538,
+            "n": 13
+          }
+        ]
+      },
+      "features": [
+        "lat",
+        "lon",
+        "sst_c",
+        "chlorophyll",
+        "wind_speed_ms",
+        "wind_direction_deg",
+        "current_speed_ms",
+        "current_direction_deg",
+        "wave_height_m",
+        "depth_m",
+        "distance_from_coast_km",
+        "month",
+        "season_idx",
+        "hour"
+      ]
+    },
+    "xgboost": {
+      "metrics_valid": {
+        "roc_auc": 0.5694,
+        "pr_auc": 0.5694,
+        "f1": 0.5432,
+        "precision": 0.5366,
+        "recall": 0.55,
+        "brier": 0.2693,
+        "confusion_matrix": [
+          [
+            21,
+            19
+          ],
+          [
+            18,
+            22
+          ]
+        ],
+        "calibration": [
+          {
+            "bin": [
+              0,
+              0.2
+            ],
+            "mean_pred": 0.143,
+            "mean_obs": 0.167,
+            "n": 6
+          },
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "mean_pred": 0.33,
+            "mean_obs": 0.52,
+            "n": 25
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "mean_pred": 0.487,
+            "mean_obs": 0.438,
+            "n": 16
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "mean_pred": 0.694,
+            "mean_obs": 0.583,
+            "n": 24
+          },
+          {
+            "bin": [
+              0.8,
+              1.01
+            ],
+            "mean_pred": 0.879,
+            "mean_obs": 0.556,
+            "n": 9
+          }
+        ]
+      },
+      "features": [
+        "lat",
+        "lon",
+        "sst_c",
+        "chlorophyll",
+        "wind_speed_ms",
+        "wind_direction_deg",
+        "current_speed_ms",
+        "current_direction_deg",
+        "wave_height_m",
+        "depth_m",
+        "distance_from_coast_km",
+        "month",
+        "season_idx",
+        "hour"
+      ]
+    },
+    "lightgbm": {
+      "metrics_valid": {
+        "roc_auc": 0.5588,
+        "pr_auc": 0.5483,
+        "f1": 0.557,
+        "precision": 0.5641,
+        "recall": 0.55,
+        "brier": 0.284,
+        "confusion_matrix": [
+          [
+            23,
+            17
+          ],
+          [
+            18,
+            22
+          ]
+        ],
+        "calibration": [
+          {
+            "bin": [
+              0,
+              0.2
+            ],
+            "mean_pred": 0.125,
+            "mean_obs": 0.5,
+            "n": 10
+          },
+          {
+            "bin": [
+              0.2,
+              0.4
+            ],
+            "mean_pred": 0.277,
+            "mean_obs": 0.435,
+            "n": 23
+          },
+          {
+            "bin": [
+              0.4,
+              0.6
+            ],
+            "mean_pred": 0.511,
+            "mean_obs": 0.476,
+            "n": 21
+          },
+          {
+            "bin": [
+              0.6,
+              0.8
+            ],
+            "mean_pred": 0.696,
+            "mean_obs": 0.588,
+            "n": 17
+          },
+          {
+            "bin": [
+              0.8,
+              1.01
+            ],
+            "mean_pred": 0.863,
+            "mean_obs": 0.556,
+            "n": 9
+          }
+        ]
+      },
+      "features": [
+        "lat",
+        "lon",
+        "sst_c",
+        "chlorophyll",
+        "wind_speed_ms",
+        "wind_direction_deg",
+        "current_speed_ms",
+        "current_direction_deg",
+        "wave_height_m",
+        "depth_m",
+        "distance_from_coast_km",
+        "month",
+        "season_idx",
+        "hour"
+      ]
+    }
+  },
+  "selected_claim": "best validated=logreg; deploy only with acceptable calibration",
+  " Run_at": "2026-09-26T17:40:01.546409"
+}

@@ -10,6 +10,12 @@ const nextConfig = {
   devIndicators: false,
   allowedDevOrigins: Array.from(new Set([...defaultDevOrigins, ...envDevOrigins])),
   poweredByHeader: false,
+  env: {
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:
+      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ||
+      process.env.VITE_GOOGLE_MAPS_API_KEY ||
+      '',
+  },
   async headers() {
     return [
       {
@@ -29,7 +35,7 @@ const nextConfig = {
               "font-src 'self' data: https://fonts.gstatic.com",
               "img-src 'self' data: blob: https:",
               "media-src 'self' data: blob: https:",
-              "connect-src 'self' https: wss:",
+              "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 ws://localhost:8000 https: wss:",
               "frame-ancestors 'self'",
               "object-src 'none'",
               "base-uri 'self'"
@@ -69,8 +75,7 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    const backendUrl = process.env.ORCA_API_UPSTREAM || process.env.NEXT_PUBLIC_API_URL;
-    if (!backendUrl) return [];
+    const backendUrl = process.env.ORCA_API_UPSTREAM || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     return [
       {
         source: '/api/v1/:path*',

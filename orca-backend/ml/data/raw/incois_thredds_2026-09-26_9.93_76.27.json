@@ -1,0 +1,22 @@
+{
+  "lat": 9.93,
+  "lon": 76.27,
+  "valid_time": "2026-09-26T18:39:58.725512",
+  "retrieval_time": "2026-09-26T18:40:01.132885",
+  "source": "INCOIS-THREDDS",
+  "quality": "ok",
+  "wave_height_m": 1.0632964372634888,
+  "wave_period_s": 19.755756378173828,
+  "wind_speed_ms": 1.2808487339396906,
+  "wind_direction_deg": 24.66358684825559,
+  "current_speed_ms": null,
+  "current_direction_deg": null,
+  "sst_c": 28.410723391361252,
+  "chlorophyll": null,
+  "_files": {
+    "wave": "WAVES_coast_20260925.nc",
+    "winds": "WINDS_20260925.nc",
+    "sst": "SST_NIO_20260925.nc"
+  },
+  "_errors": {}
+}

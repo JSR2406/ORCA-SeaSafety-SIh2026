@@ -5,10 +5,19 @@ import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import PageWrapper from './PageWrapper';
 import { ConnectionNotice } from './ConnectionNotice';
+import SosEmergencyModal from './SosEmergencyModal';
+import Icon from './Icon';
 
 export default function AppShell({ children, title, subtitle, actions }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sosModalOpen, setSosModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenSos = () => setSosModalOpen(true);
+    window.addEventListener('orca:open-sos', handleOpenSos);
+    return () => window.removeEventListener('orca:open-sos', handleOpenSos);
+  }, []);
 
   useEffect(() => {
     try {
@@ -69,6 +78,26 @@ export default function AppShell({ children, title, subtitle, actions }) {
         </PageWrapper>
         </main>
       </div>
+
+      {/* Global Floating SOS Trigger Button */}
+      <button
+        type="button"
+        className="floating-sos-trigger"
+        onClick={() => setSosModalOpen(true)}
+        aria-label="Activate Emergency SOS Distress Relay"
+        title="Distress Relay (Coast Guard MRCC 1554 / VHF Ch 16)"
+        data-testid="floating-sos-trigger"
+      >
+        <span className="sos-beacon-dot" />
+        <Icon name="LifeBuoy" size={17} />
+        <span>EMERGENCY SOS</span>
+      </button>
+
+      {/* Global Emergency Distress Modal */}
+      <SosEmergencyModal
+        isOpen={sosModalOpen}
+        onClose={() => setSosModalOpen(false)}
+      />
     </div>
   );
 }

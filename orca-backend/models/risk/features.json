@@ -1,0 +1,14 @@
+[
+  "wave_height_m",
+  "wave_period_s",
+  "wind_speed_ms",
+  "current_speed_ms",
+  "visibility_km",
+  "rain_mm",
+  "sst_c",
+  "cyclone_distance_km",
+  "lightning_flag",
+  "month",
+  "hour",
+  "forecast_uncertainty"
+]

@@ -8,6 +8,17 @@ import Badge from '../components/Badge';
 import Icon from '../components/Icon';
 import { getGoogleMapsApiKey, setGoogleMapsApiKey, maskApiKey, isEnvApiKey } from '../utils/googleMaps';
 import { useLanguage } from '../context/LanguageContext';
+import { dispatchSmsAlert } from '../services/apiClient';
+
+const EMERGENCY_PREFS_KEY = 'orca-emergency-prefs';
+
+function loadEmergencyPrefs() {
+  try {
+    return JSON.parse(localStorage.getItem(EMERGENCY_PREFS_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
 
 export default function ProfileSettingsPage() {
   const { language, setLanguage, t, languages } = useLanguage();
@@ -17,7 +28,7 @@ export default function ProfileSettingsPage() {
   const [isEditingGmapsKey, setIsEditingGmapsKey] = useState(false);
   const [newGmapsKey, setNewGmapsKey] = useState('');
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     name: 'Dr. Ananya Kumar',
     org: 'National Institute of Oceanic Studies (NIOS)',
     role: 'Principal Marine Biologist & Coastal Researcher',
@@ -34,8 +45,10 @@ export default function ProfileSettingsPage() {
     mmsiNumber: '419001248',
     emergencyPhone: '+91 94470 12345',
     navtexFrequency: '518 kHz (English Standard)',
-    vesselCallSign: 'KL-09-ORCA'
-  });
+    vesselCallSign: 'KL-09-ORCA',
+    ...loadEmergencyPrefs()
+  }));
+  const [smsToast, setSmsToast] = useState('');
 
   const handleSave = () => {
     if (isEditingGmapsKey && newGmapsKey.trim()) {
@@ -44,8 +57,33 @@ export default function ProfileSettingsPage() {
       setIsEditingGmapsKey(false);
       setNewGmapsKey('');
     }
+    try {
+      localStorage.setItem(EMERGENCY_PREFS_KEY, JSON.stringify({
+        emergencyPhone: form.emergencyPhone,
+        smsEmergency: form.smsEmergency,
+        whatsappFleet: form.whatsappFleet,
+        waveRiskThreshold: form.waveRiskThreshold
+      }));
+    } catch {
+      // storage unavailable — keep in-memory state only
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
+  };
+
+  const handleTestSms = async () => {
+    setSmsToast(t('sms.sending', 'Sending test SMS…'));
+    const res = await dispatchSmsAlert({
+      phone: form.emergencyPhone,
+      message: 'ORCA test advisory: swell Hs 1.6m near Kochi (09.93N, 76.27E). Maintain VHF Ch16 watch.',
+      severity: 'INFO'
+    });
+    const label = res.isLive
+      ? (res.demo ? t('sms.sentDemo', 'Test SMS logged (demo mode — simulated).')
+        : t('sms.sentLive', 'Test SMS sent via live provider.'))
+      : t('sms.queuedOffline', 'Backend offline — SMS queued for later sync.');
+    setSmsToast(label);
+    setTimeout(() => setSmsToast(''), 5000);
   };
 
   const handleRemoveGmapsKey = () => {
@@ -334,10 +372,20 @@ export default function ProfileSettingsPage() {
                 <Icon name="Save" size={14} />
                 <span>Save Notification Rules</span>
               </button>
+              <button className="btn secondary" onClick={handleTestSms} style={{ marginLeft: 8 }}>
+                <Icon name="MessageSquare" size={14} />
+                <span>{t('sms.sendTest', 'Send test SMS')}</span>
+              </button>
               {saved && (
                 <span className="save-success-indicator">
                   <Icon name="CheckCircle" size={14} />
                   <span>Distress routing credentials updated with Coast Guard MRCC Kochi.</span>
+                </span>
+              )}
+              {smsToast && (
+                <span className="save-success-indicator">
+                  <Icon name="Bell" size={14} />
+                  <span>{smsToast}</span>
                 </span>
               )}
             </div>

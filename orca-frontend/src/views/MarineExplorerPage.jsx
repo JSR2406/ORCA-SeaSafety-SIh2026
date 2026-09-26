@@ -6,17 +6,19 @@ import AppShell from '../components/AppShell';
 import MarineMap from '../components/DynamicMarineMap';
 import Icon from '../components/Icon';
 import Badge from '../components/Badge';
-import { geocodeLocation, getGoogleMapsApiKey } from '../utils/googleMaps';
+import { geocodeLocation, getGoogleMapsApiKey, INDIA_COASTAL_SECTORS } from '../utils/googleMaps';
 
-// Sector Quick Jump Presets
-const QUICK_SECTORS = [
-  { label: '⚓ Kochi Fairway', lat: 9.9750, lng: 76.1650, zoom: 12, depth: 24, name: 'Cochin Fairway Buoy Approach' },
-  { label: '🐟 PFZ-01 Shelf', lat: 9.8700, lng: 76.1400, zoom: 12, depth: 42, name: 'PFZ-01 Kochi Offshore Upwelling' },
-  { label: '⚓ Munambam Port', lat: 10.1800, lng: 76.1600, zoom: 13, depth: 6, name: 'Munambam Fishing Port Bar Mouth' },
-  { label: '⚠️ Naval Firing Box', lat: 9.9300, lng: 76.2200, zoom: 12, depth: 28, name: 'NAVAREA VIII Sector Bravo Firing Polygon' },
-  { label: '🌊 200m Shelf Edge', lat: 9.8500, lng: 75.6800, zoom: 11, depth: 210, name: 'Continental Shelf Break Front' },
-  { label: '🏖️ Alappuzha Coast', lat: 9.4900, lng: 76.3300, zoom: 12, depth: 9, name: 'Alappuzha Coastal Landing Center' }
-];
+// Sector Quick Jump Presets mapped to India's major coastal regions
+const QUICK_SECTORS = INDIA_COASTAL_SECTORS.map((s) => ({
+  id: s.id,
+  label: s.shortName,
+  lat: s.lat,
+  lng: s.lng,
+  zoom: s.zoom,
+  depth: s.id === 'islands' ? 120 : s.id === 'all-india' ? 85 : 35,
+  name: s.name,
+  description: s.description
+}));
 
 // Sea State Forecast Telemetry by Horizon
 const FORECAST_TELEMETRY = {
@@ -29,18 +31,19 @@ const FORECAST_TELEMETRY = {
 
 export default function MarineExplorerPage() {
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('Kochi Coastal Sector • 09°58\'N, 076°16\'E');
+  const [selectedSectorId, setSelectedSectorId] = useState('all-india');
+  const [searchQuery, setSearchQuery] = useState('All India Waters • 7,516 km Coastline');
   const [selectedDate, setSelectedDate] = useState('04 Sep 2026');
   const [forecastHorizon, setForecastHorizon] = useState('NOW');
   const [externalFlyTo, setExternalFlyTo] = useState(null);
 
-  // Tactical GPS Fix State
+  // Tactical GPS Fix State - Defaults to Indian Peninsula
   const [activeFix, setActiveFix] = useState({
-    lat: 9.9667,
-    lng: 76.1650,
+    lat: 15.2,
+    lng: 78.5,
     distKm: '0.0',
-    estDepth: 24,
-    name: 'Kochi Fairway Approach'
+    estDepth: 85,
+    name: 'All India Coastal Waters & EEZ'
   });
 
   // Handle Incoming URL Parameters from Alerts Center or External Links
@@ -151,12 +154,13 @@ export default function MarineExplorerPage() {
   };
 
   const handleJumpSector = (sector) => {
+    setSelectedSectorId(sector.id || null);
     setExternalFlyTo({ lat: sector.lat, lng: sector.lng, zoom: sector.zoom, name: sector.name });
     setActiveFix({
       lat: sector.lat,
       lng: sector.lng,
       distKm: '0.0',
-      estDepth: sector.depth,
+      estDepth: sector.depth || 35,
       name: sector.name
     });
     setSearchQuery(`${sector.name} • ${sector.lat}°N, ${sector.lng}°E`);
@@ -176,18 +180,63 @@ export default function MarineExplorerPage() {
       features.push(
         {
           type: 'Feature',
-          properties: { name: 'Kochi Fishing Harbour (Base HQ)', type: 'port', depth: '14.5m', berths: '450 vessels' },
+          properties: { name: 'Kandla (Deendayal Port)', state: 'Gujarat', type: 'major_port' },
+          geometry: { type: 'Point', coordinates: [70.2167, 23.0] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'Veraval Fishery Harbour', state: 'Gujarat', type: 'port' },
+          geometry: { type: 'Point', coordinates: [70.3667, 20.9] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'Mumbai Sassoon Dock', state: 'Maharashtra', type: 'major_port' },
+          geometry: { type: 'Point', coordinates: [72.825, 18.915] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'Mormugao Harbour', state: 'Goa', type: 'major_port' },
+          geometry: { type: 'Point', coordinates: [73.805, 15.415] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'Malpe Fishery Harbour', state: 'Karnataka', type: 'port' },
+          geometry: { type: 'Point', coordinates: [74.701, 13.352] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'Kochi Fishing Harbour (Base HQ)', state: 'Kerala', type: 'major_port', depth: '14.5m' },
           geometry: { type: 'Point', coordinates: [76.2667, 9.9667] }
         },
         {
           type: 'Feature',
-          properties: { name: 'Munambam Fishing Port', type: 'port', depth: '6.2m', berths: '320 vessels' },
-          geometry: { type: 'Point', coordinates: [76.1600, 10.1800] }
+          properties: { name: 'Tuticorin (V.O.C Port)', state: 'Tamil Nadu', type: 'major_port' },
+          geometry: { type: 'Point', coordinates: [78.18, 8.75] }
         },
         {
           type: 'Feature',
-          properties: { name: 'Alappuzha Coastal Landing', type: 'port', depth: '8.5m' },
-          geometry: { type: 'Point', coordinates: [76.3300, 9.4900] }
+          properties: { name: 'Chennai Port Trust', state: 'Tamil Nadu', type: 'major_port' },
+          geometry: { type: 'Point', coordinates: [80.3, 13.085] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'Visakhapatnam Major Port', state: 'Andhra Pradesh', type: 'major_port' },
+          geometry: { type: 'Point', coordinates: [83.3, 17.69] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'Paradip Port Trust', state: 'Odisha', type: 'major_port' },
+          geometry: { type: 'Point', coordinates: [86.68, 20.26] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'Digha Fishery Harbour', state: 'West Bengal', type: 'port' },
+          geometry: { type: 'Point', coordinates: [87.55, 21.63] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'Port Blair Harbour', state: 'Andaman & Nicobar', type: 'port' },
+          geometry: { type: 'Point', coordinates: [92.74, 11.67] }
         }
       );
     }
@@ -196,40 +245,75 @@ export default function MarineExplorerPage() {
       features.push(
         {
           type: 'Feature',
-          properties: { name: 'PFZ-01: Kochi Offshore Front', sst: '28.4 °C', chlorophyll: '0.88 mg/m³', depth: '42m', potential: 'High' },
-          geometry: { type: 'Point', coordinates: [76.1400, 9.8700] }
+          properties: { name: 'PFZ-GJ-01: Veraval Offshore Front', sst: '27.4 °C', chlorophyll: '1.25 mg/m³', depth: '45m', potential: 'High' },
+          geometry: { type: 'Point', coordinates: [69.95, 20.72] }
         },
         {
           type: 'Feature',
-          properties: { name: 'PFZ-02: Vypin Deep Upwelling', sst: '28.1 °C', chlorophyll: '0.79 mg/m³', depth: '58m', potential: 'High' },
-          geometry: { type: 'Point', coordinates: [76.0700, 9.9600] }
+          properties: { name: 'PFZ-MH-01: Ratnagiri Upwelling', sst: '28.1 °C', chlorophyll: '1.10 mg/m³', depth: '52m', potential: 'High' },
+          geometry: { type: 'Point', coordinates: [72.85, 17.02] }
         },
         {
           type: 'Feature',
-          properties: { name: 'PFZ-03: Alappuzha Shelf Margin', sst: '27.8 °C', chlorophyll: '0.64 mg/m³', depth: '75m', potential: 'Medium' },
-          geometry: { type: 'Point', coordinates: [76.1900, 9.5700] }
+          properties: { name: 'PFZ-KL-01: Kochi Offshore Front', sst: '28.4 °C', chlorophyll: '0.88 mg/m³', depth: '42m', potential: 'High' },
+          geometry: { type: 'Point', coordinates: [76.14, 9.87] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'PFZ-TN-01: Wadge Bank Pelagic Front', sst: '28.0 °C', chlorophyll: '1.45 mg/m³', depth: '48m', potential: 'High' },
+          geometry: { type: 'Point', coordinates: [77.55, 7.85] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'PFZ-AP-01: Godavari Estuary Plume', sst: '28.6 °C', chlorophyll: '1.30 mg/m³', depth: '55m', potential: 'High' },
+          geometry: { type: 'Point', coordinates: [82.52, 16.78] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'PFZ-OD-01: Paradip Shelf Break', sst: '28.3 °C', chlorophyll: '1.15 mg/m³', depth: '62m', potential: 'High' },
+          geometry: { type: 'Point', coordinates: [86.95, 20.12] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'PFZ-WB-01: Sandheads Oceanic Convergence', sst: '28.5 °C', chlorophyll: '1.40 mg/m³', depth: '35m', potential: 'High' },
+          geometry: { type: 'Point', coordinates: [88.25, 21.25] }
         }
       );
     }
 
     if (layersState.restrictedAreas) {
-      features.push({
-        type: 'Feature',
-        properties: { name: 'NAVAREA VIII Sector Bravo Firing Exercise', warning: 'Strict Exclusion' },
-        geometry: {
-          type: 'Polygon',
-          coordinates: [[[76.17, 9.92], [76.24, 9.98], [76.28, 9.93], [76.22, 9.88], [76.17, 9.92]]]
+      features.push(
+        {
+          type: 'Feature',
+          properties: { name: 'NAVAREA VIII Sector Bravo Firing Exercise', warning: 'Strict Exclusion' },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[[76.17, 9.92], [76.24, 9.98], [76.28, 9.93], [76.22, 9.88], [76.17, 9.92]]]
+          }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'Mumbai High ODAG Security Zone', warning: 'Naval Offshore Security Exclusion' },
+          geometry: {
+            type: 'Polygon',
+            coordinates: [[[71.25, 19.35], [71.55, 19.35], [71.55, 19.05], [71.25, 19.05], [71.25, 19.35]]]
+          }
         }
-      });
+      );
     }
 
     if (layersState.eez) {
       features.push({
         type: 'Feature',
-        properties: { name: 'Indian Territorial Sea (12 NM)', jurisdiction: 'UNCLOS Sovereign Baseline' },
+        properties: { name: 'Indian Territorial Sea (12 NM Baseline)', jurisdiction: 'UNCLOS Sovereign Baseline' },
         geometry: {
           type: 'LineString',
-          coordinates: [[75.72, 10.45], [75.88, 10.18], [75.98, 9.9667], [76.08, 9.50], [76.32, 8.85]]
+          coordinates: [
+            [68.6, 23.6], [69.1, 22.3], [69.8, 20.8], [72.3, 19.1],
+            [73.4, 15.8], [74.5, 13.8], [75.9, 10.2], [77.4, 8.2],
+            [78.4, 8.9], [80.1, 12.8], [82.3, 16.5], [86.5, 20.1],
+            [88.0, 21.4]
+          ]
         }
       });
     }
@@ -238,34 +322,33 @@ export default function MarineExplorerPage() {
       features.push(
         {
           type: 'Feature',
-          properties: { name: 'ICGS VARUNA', mmsi: '419000112', type: 'coast_guard', speed: '21.5 kts', cog: '045°' },
-          geometry: { type: 'Point', coordinates: [76.1200, 9.9150] }
+          properties: { name: 'ICGS SAMARTH', mmsi: '419000101', type: 'coast_guard', sector: 'Gujarat' },
+          geometry: { type: 'Point', coordinates: [69.85, 21.6] }
         },
         {
           type: 'Feature',
-          properties: { name: 'F/V MATSYA-04', mmsi: '419001248', type: 'fishing', speed: '9.8 kts', cog: '255°' },
-          geometry: { type: 'Point', coordinates: [76.1800, 9.9400] }
+          properties: { name: 'ICGS VIJIT', mmsi: '419000105', type: 'coast_guard', sector: 'Mumbai' },
+          geometry: { type: 'Point', coordinates: [72.6, 18.8] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'ICGS VARUNA', mmsi: '419000112', type: 'coast_guard', speed: '21.5 kts', cog: '045°' },
+          geometry: { type: 'Point', coordinates: [76.12, 9.915] }
+        },
+        {
+          type: 'Feature',
+          properties: { name: 'ICGS SUJAY', mmsi: '419000108', type: 'coast_guard', sector: 'Odisha / Bengal' },
+          geometry: { type: 'Point', coordinates: [87.1, 20.5] }
         }
       );
-    }
-
-    if (layersState.weatherWarnings) {
-      features.push({
-        type: 'Feature',
-        properties: { name: 'INCOIS High Swell Yellow Alert Zone', wave_height: '2.2m - 2.6m' },
-        geometry: {
-          type: 'Polygon',
-          coordinates: [[[76.00, 10.50], [76.25, 10.50], [76.40, 9.30], [76.05, 9.30], [76.00, 10.50]]]
-        }
-      });
     }
 
     const geojsonData = {
       type: 'FeatureCollection',
       metadata: {
         system: 'ORCA Marine Intelligence GIS',
-        agency: 'INCOIS / IMD / MoES',
-        sector: 'Kochi & Malabar Maritime Grid',
+        agency: 'INCOIS / IMD / MoES / Indian Coast Guard',
+        sector: 'Pan-India EEZ & Coastal Maritime Grid',
         datum: 'WGS 84',
         forecastHorizon: forecastHorizon,
         activeLayerCount: Object.values(layersState).filter(Boolean).length,
@@ -278,7 +361,7 @@ export default function MarineExplorerPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ORCA_Marine_GIS_${forecastHorizon}_${Date.now()}.geojson`;
+    a.download = `ORCA_Marine_GIS_India_${forecastHorizon}_${Date.now()}.geojson`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -359,14 +442,15 @@ export default function MarineExplorerPage() {
 
       {/* Quick Sector Presets Bar */}
       <div className="explorer-quick-sectors">
-        <span className="quick-sectors-lbl">QUICK SECTOR:</span>
+        <span className="quick-sectors-lbl">COASTAL SECTORS:</span>
         <div className="quick-sectors-chips">
           {QUICK_SECTORS.map((s) => (
             <button
-              key={s.label}
+              key={s.id || s.label}
               type="button"
-              className="quick-sector-chip"
+              className={`quick-sector-chip ${selectedSectorId === s.id ? 'active' : ''}`}
               onClick={() => handleJumpSector(s)}
+              title={s.description || s.name}
             >
               {s.label}
             </button>
@@ -420,6 +504,8 @@ export default function MarineExplorerPage() {
         <div className="explorer-map-stage">
           <MarineMap
             large
+            initialSectorId={selectedSectorId || 'all-india'}
+            showKeyConfig={true}
             layersState={layersState}
             forecastHorizon={forecastHorizon}
             externalFlyTo={externalFlyTo}

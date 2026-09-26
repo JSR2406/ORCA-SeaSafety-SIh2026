@@ -1,0 +1,19 @@
+{
+  "method": "gain_fallback (AttributeError)",
+  "importance": {
+    "lat": 0.07575,
+    "lon": 0.05782,
+    "sst_c": 0.07358,
+    "chlorophyll": 0.07535,
+    "wind_speed_ms": 0.07951,
+    "wind_direction_deg": 0.06987,
+    "current_speed_ms": 0.08065,
+    "current_direction_deg": 0.0685,
+    "wave_height_m": 0.07535,
+    "depth_m": 0.07862,
+    "distance_from_coast_km": 0.07187,
+    "month": 0.05549,
+    "season_idx": 0.0709,
+    "hour": 0.06675
+  }
+}

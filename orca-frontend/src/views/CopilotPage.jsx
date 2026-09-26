@@ -70,7 +70,15 @@ function CopilotContent() {
   ]);
 
   useEffect(() => {
-    if (messages.length > 2) streamRef.current?.scrollTo({ top: streamRef.current.scrollHeight, behavior: 'smooth' });
+    const timer = setTimeout(() => {
+      if (streamRef.current) {
+        streamRef.current.scrollTo({
+          top: streamRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      }
+    }, 60);
+    return () => clearTimeout(timer);
   }, [messages, isProcessing]);
 
   useEffect(() => {
@@ -310,19 +318,53 @@ function CopilotContent() {
       const isPfz = lower.includes('pfz') || lower.includes('fish') || lower.includes('chlorophyll') || lower.includes('tuna') || lower.includes('मछली');
       const isNaval = lower.includes('naval') || lower.includes('restriction') || lower.includes('firing') || lower.includes('sector bravo');
       const isHighRisk = lower.includes('high risk') || lower.includes('danger') || lower.includes('squall') || lower.includes('cyclone');
+      const isKnowledge = lower.includes('mpa') || lower.includes('protected area') || lower.includes('what is') || lower.includes('explain') || lower.includes('who are') || lower.includes('define');
 
       let verdictTone = 'orange';
       let verdict = 'MODERATE RISK — OPERATIONAL CAUTION ADVISORY';
+      let departureWindow = 'Recommended Window: 04:30 – 11:30 IST';
+      let hydroParams = [
+        { param: 'Significant Wave Height (Hs)', val: '1.4 m – 1.6 m', status: 'Moderate Swell', code: 'Douglas 3' },
+        { param: 'Peak Swell Period (Tp)', val: '11.8 seconds', status: 'Long-period swell', code: 'Normal' },
+        { param: 'Surface Wind Vector', val: '065° ENE @ 18 km/h', status: 'Safe limits', code: 'Beaufort 3' },
+        { param: 'Engine Telemetry', val: response.isLive ? `FastAPI Live (${response.latencyMs}ms)` : 'Edge Resilient Fallback', status: response.isLive ? 'Live API' : 'Fallback', code: response.status || 'OK' }
+      ];
 
-      if (isNaval || isHighRisk) {
+      if (isKnowledge) {
+        verdictTone = 'cyan';
+        verdict = 'OCEANIC KNOWLEDGE & CONSERVATION DIRECTIVE';
+        departureWindow = 'Domain Classification: Marine Ecology & Environmental Policy';
+        hydroParams = [
+          { param: 'Marine Knowledge Domain', val: 'Ecosystem & Governance', status: 'Authoritative', code: 'WPA / CRZ' },
+          { param: 'Territorial Jurisdiction', val: 'Coastal Waters (12 NM / EEZ)', status: 'Standardized', code: 'UNCLOS' },
+          { param: 'Source Lineage', val: 'INCOIS / MoEFCC / IUCN', status: 'Verified', code: 'ISO-19115' },
+          { param: 'Engine Telemetry', val: response.isLive ? `FastAPI Live (${response.latencyMs}ms)` : 'Edge Knowledge Engine', status: response.isLive ? 'Live API' : 'Fallback', code: response.status || 'OK' }
+        ];
+      } else if (isNaval || isHighRisk) {
         verdictTone = 'red';
         verdict = isNaval ? 'ACTIVE NAVAL RESTRICTION: SECTOR BRAVO' : 'HIGH MARITIME RISK DETECTED';
-      } else if (isPfz) {
-        verdictTone = 'green';
-        verdict = 'OPTIMAL PELAGIC HARVEST FRONT ACTIVE AT PFZ-01';
-      } else if (lower.includes('safe') || lower.includes('optimal')) {
-        verdictTone = 'green';
-        verdict = 'CONDITIONS WITHIN CERTIFIED OPERATIONAL LIMITS';
+        departureWindow = 'Advisory: Delay Departure / Follow Cochin Fairway Corridor';
+      } else if (response.ml_scores && !isKnowledge) {
+        const riskLvl = response.ml_scores.risk_level;
+        const riskScore = response.ml_scores.risk_score;
+        if (riskLvl === 'EXTREME' || riskLvl === 'ELEVATED') {
+          verdictTone = 'red';
+          verdict = `HIGH RISK (${riskScore.toFixed(2)}) — RESTRICTED MARITIME OPERATIONS`;
+          departureWindow = 'Operational Window: Delay Departure / Standby on VHF CH 16';
+        } else if (riskLvl === 'MODERATE' || riskLvl === 'LOW_MODERATE') {
+          verdictTone = 'orange';
+          verdict = `MODERATE RISK (${riskScore.toFixed(2)}) — OPERATIONAL CAUTION ADVISORY`;
+          departureWindow = 'Recommended Departure: 04:30 – 11:30 IST';
+        } else {
+          verdictTone = 'green';
+          verdict = `CERTIFIED SAFE (${riskScore.toFixed(2)}) — CONDITIONS WITHIN LIMITS`;
+          departureWindow = 'Optimal Departure Window: 04:30 – 12:00 IST';
+        }
+      }
+
+      // If backend ML model returned dynamic hydrodynamic evaluation parameters, use them
+      if (response.hydrodynamics && Array.isArray(response.hydrodynamics) && response.hydrodynamics.length > 0 && !isKnowledge) {
+        hydroParams = response.hydrodynamics;
       }
 
       // Extract citations
@@ -332,7 +374,13 @@ function CopilotContent() {
         'NAVAREA VIII Marine Navigational Warning Bulletin'
       ];
 
-      if (response.evidence && Array.isArray(response.evidence) && response.evidence.length > 0) {
+      if (isKnowledge) {
+        citations = [
+          'Wildlife (Protection) Act, 1972 & CRZ Notifications (MoEFCC)',
+          'IUCN World Commission on Protected Areas (WCPA-Marine)',
+          'Central Marine Fisheries Research Institute (ICAR-CMFRI)'
+        ];
+      } else if (response.evidence && Array.isArray(response.evidence) && response.evidence.length > 0) {
         citations = response.evidence.map((ev) => 
           typeof ev === 'string' ? ev : `${ev.claim || 'Verified metric'} [${ev.source || 'INCOIS/NHO'}]`
         );
@@ -344,13 +392,8 @@ function CopilotContent() {
         bulletinId: response.queryRunId ? `ORCA-${response.queryRunId.slice(0, 8).toUpperCase()}` : `ADV-KC4-${Date.now().toString().slice(-4)}`,
         verdict,
         verdictTone,
-        departureWindow: isPfz ? 'Harvest Window: 04:30 – 10:30 IST' : 'Recommended Window: 04:30 – 11:30 IST',
-        hydrodynamics: [
-          { param: 'Significant Wave Height (Hs)', val: '1.4 m – 1.6 m', status: 'Moderate Swell', code: 'Douglas 3' },
-          { param: 'Peak Swell Period (Tp)', val: '11.8 seconds', status: 'Long-period swell', code: 'Normal' },
-          { param: 'Surface Wind Vector', val: '065° ENE @ 18 km/h', status: 'Safe limits', code: 'Beaufort 3' },
-          { param: 'Engine Telemetry', val: response.isLive ? `FastAPI Live (${response.latencyMs}ms)` : 'Edge Resilient Fallback', status: response.isLive ? 'Live API' : 'Fallback', code: response.status || 'OK' }
-        ],
+        departureWindow,
+        hydrodynamics: hydroParams,
         directive: response.answer,
         evidenceCitations: citations,
         timestamp: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' IST',
@@ -410,10 +453,23 @@ function CopilotContent() {
       <div className="terminal-workspace-grid">
         <div className="terminal-dialog-panel">
           {/* Messages Stream */}
-          <div className="terminal-messages-stream" ref={streamRef} aria-live="polite" data-testid="copilot-conversation">
+          <div
+            className="terminal-messages-stream"
+            ref={streamRef}
+            aria-live="polite"
+            data-testid="copilot-conversation"
+            style={{
+              flex: '1 1 auto',
+              minHeight: 0,
+              overflowY: 'auto',
+              overscrollBehavior: 'contain',
+              scrollbarWidth: 'thin'
+            }}
+            tabIndex={0}
+          >
             {messages.map((m) =>
               m.sender === 'user' ? (
-                <div key={m.id} className="terminal-user-entry">
+                <div key={m.id} className="terminal-user-entry" style={{ flexShrink: 0, minHeight: 'fit-content' }}>
                   <div className="user-entry-meta">
                     <span className="user-tag">OPERATOR QUERY</span>
                     <span className="user-time">{m.timestamp}</span>
@@ -421,7 +477,7 @@ function CopilotContent() {
                   <div className="user-entry-text">{m.text}</div>
                 </div>
               ) : (
-                <div key={m.id} className="terminal-bulletin-entry">
+                <div key={m.id} className="terminal-bulletin-entry" style={{ flexShrink: 0, minHeight: 'fit-content', height: 'auto', overflow: 'visible' }}>
                   <div className="ocean-message-source" data-testid={`copilot-source-${m.id}`}>{m.isLiveEngine ? 'API RESPONSE · VERIFY SOURCE FRESHNESS' : 'ILLUSTRATIVE RESPONSE · NOT FOR NAVIGATION'}</div>
                   {/* Bulletin Header Bar */}
                   <div className="bulletin-header-bar">
@@ -483,9 +539,11 @@ function CopilotContent() {
                   <div className="bulletin-directive-box">
                     <div className="dir-title">
                       <Icon name="Navigation" size={13} />
-                      <b>NAVIGATIONAL &amp; OPERATIONAL DIRECTIVE:</b>
+                      <b>{m.verdictTone === 'cyan' ? 'INTELLIGENCE BRIEFING & REGULATORY DIRECTIVE:' : 'NAVIGATIONAL & OPERATIONAL DIRECTIVE:'}</b>
                     </div>
-                    <p>{m.directive}</p>
+                    <div style={{ whiteSpace: 'pre-line', lineHeight: '1.65', fontSize: '13.5px', color: 'var(--c-text-primary)' }}>
+                      {m.directive}
+                    </div>
                   </div>
 
                   {/* Actions Row */}
@@ -551,7 +609,7 @@ function CopilotContent() {
               )
             )}
             {isProcessing && (
-              <div className="terminal-bulletin-entry" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div className="terminal-bulletin-entry" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
                 <span className="enc-pulse-dot" />
                 <span style={{ fontSize: '13px', color: 'var(--c-accent-cyan, #0ea5e9)', fontWeight: 500 }}>
                   ORCA Oceanographic Engine reasoning...

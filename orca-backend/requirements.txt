@@ -1,61 +1,23 @@
-# FloatChat / ORCA backend dependencies
-# =====================================
-# Canonical dependency manifest.  Pinned to the versions the backend was
-# validated against (the working environment on 2026-09-07).  One file, one
-# venv (`venv\` at repo root), one `.env` (repo root).
-# Install:  python -m venv venv  &&  venv\Scripts\python -m pip install -r requirements.txt
-
-# Core Framework
-fastapi==0.141.1
-uvicorn[standard]==0.52.4
-pydantic==2.13.4
-pydantic-settings==2.3.3
-mcp>=1.2.0
-
-# Database
-sqlalchemy==2.0.30
-asyncpg==0.29.0
-psycopg2-binary==2.9.9
-alembic==1.13.1
-geoalchemy2==0.14.1
-shapely==2.0.7
-
-# ARGO Data
-argopy==0.1.15
-erddapy==0.7.2
-xarray==2023.1.0
-pandas==1.5.3
-numpy==1.24.4
-scipy==1.13.1
-pyarrow==16.1.0
-netCDF4==1.7.4
-
-# HTTP & Utilities
-httpx==0.27.0
-python-multipart==0.0.9
-python-dotenv==1.0.1
-structlog==24.1.0
-tenacity==8.2.3
-
-# LLM (OpenAI-compatible)
-openai==1.30.1
-
-# ML & Analytics (supervised models)
-scikit-learn==1.4.2
-joblib>=1.3.0
-
-# Validation & Serialization
-orjson==3.9.10
-
-# Testing
-pytest==8.2.1
-pytest-asyncio==0.23.3
-pytest-cov==4.1.0
-
-# Scraping & Parsing (real-time marine data sources)
-beautifulsoup4==4.13.4
-lxml==5.4.0
-pypdf==4.2.0
-
-# Type Stubs
-types-python-dateutil==2.8.19.20240106
+fastapi
+uvicorn[standard]
+langgraph
+langchain
+langchain-openai
+langsmith
+supabase
+asyncpg
+pgvector
+pydantic
+pydantic-settings
+python-dotenv
+xgboost
+lightgbm
+geopandas
+scikit-learn
+joblib
+httpx
+pandas
+numpy
+shap
+xarray
+pytest

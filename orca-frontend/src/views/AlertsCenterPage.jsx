@@ -10,10 +10,19 @@ import {
   getHazards,
   createBackendAlert,
   acknowledgeBackendAlert,
+  dispatchSmsAlert,
   synthesizeAudioWithSarvam,
   operatorLogin,
   setOperatorToken
 } from '../services/apiClient';
+
+function loadEmergencyPrefs() {
+  try {
+    return JSON.parse(localStorage.getItem('orca-emergency-prefs') || '{}');
+  } catch {
+    return {};
+  }
+}
 
 const LEVEL_WORDS = {
   HIGH: { word: 'Serious', tone: 'avoid', icon: 'AlertOctagon' },
@@ -70,6 +79,8 @@ export default function AlertsCenterPage() {
   const [newNoticeSeverity, setNewNoticeSeverity] = useState('MEDIUM');
   const [newNoticeSector, setNewNoticeSector] = useState('Kochi fairway and approaches');
   const [newNoticeDirective, setNewNoticeDirective] = useState('');
+  const [dispatchViaSms, setDispatchViaSms] = useState(false);
+  const autoSmsFiredRef = useRef(false);
 
   const showToast = useCallback((message, type = 'success') => {
     const id = Date.now();
@@ -89,6 +100,20 @@ export default function AlertsCenterPage() {
         setReadAlerts(prev => ({ ...prev, ...nextRead }));
         setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
         if (manual) showToast(t('plain.alertsUpdated', 'Warnings updated'), 'success');
+        // Auto-dispatch SMS for HIGH alerts when the user opted in (fire-and-forget).
+        const prefs = loadEmergencyPrefs();
+        if (prefs.smsEmergency && prefs.emergencyPhone && !autoSmsFiredRef.current) {
+          const high = res.hazards.find((h) => (h.level || h.severity || '').toUpperCase() === 'HIGH');
+          if (high) {
+            autoSmsFiredRef.current = true;
+            dispatchSmsAlert({
+              phone: prefs.emergencyPhone,
+              message: `ORCA HIGH alert: ${high.title || 'Serious warning'} — ${high.place || ''}. ${(high.actionRequired || high.action_required || '')}`.slice(0, 300),
+              alertId: high.id,
+              severity: 'HIGH'
+            }).catch(() => {});
+          }
+        }
       }
     } catch {
       if (manual) showToast(t('plain.alertsOffline', 'You are offline · showing saved warnings'), 'warning');
@@ -203,8 +228,28 @@ export default function AlertsCenterPage() {
     setNewNoticeTitle('');
     setNewNoticeDesc('');
     setNewNoticeDirective('');
+    setDispatchViaSms(false);
     showToast('Notice published to the warning list', 'success');
     try { await createBackendAlert(noticeItem); } catch {}
+    if (dispatchViaSms) {
+      const prefs = loadEmergencyPrefs();
+      if (prefs.emergencyPhone) {
+        const res = await dispatchSmsAlert({
+          phone: prefs.emergencyPhone,
+          message: `ORCA notice (${noticeItem.level}): ${noticeItem.title} — ${noticeItem.place}. ${noticeItem.actionRequired}`.slice(0, 300),
+          alertId: noticeItem.id,
+          severity: noticeItem.level
+        });
+        showToast(
+          res.isLive
+            ? (res.demo ? t('sms.sentDemo', 'Notice dispatched via SMS (demo mode — simulated).') : t('sms.sentLive', 'Notice dispatched via SMS.'))
+            : t('sms.queuedOffline', 'SMS queued offline for later sync.'),
+          res.isLive ? 'success' : 'warning'
+        );
+      } else {
+        showToast(t('sms.noNumber', 'No emergency SMS number saved — open Profile Settings first.'), 'warning');
+      }
+    }
   };
 
   const handleOperatorLogin = async (e) => {
@@ -612,6 +657,17 @@ export default function AlertsCenterPage() {
                       onChange={(e) => setNewNoticeDesc(e.target.value)}
                       data-testid="alerts-notice-desc"
                     />
+                  </div>
+                  <div className="b-field">
+                    <label className="checkbox-field" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={dispatchViaSms}
+                        onChange={(e) => setDispatchViaSms(e.target.checked)}
+                        data-testid="alerts-notice-sms"
+                      />
+                      <span>{t('sms.alsoDispatch', 'Also dispatch via SMS')}</span>
+                    </label>
                   </div>
                 </div>
               </div>

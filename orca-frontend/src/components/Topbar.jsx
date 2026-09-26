@@ -250,6 +250,24 @@ export default function Topbar({
       </div>
 
       <div className="top-actions">
+        {/* Quick Emergency SOS Button */}
+        <button
+          type="button"
+          className="topbar-sos-pill-btn"
+          onClick={() => {
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('orca:open-sos'));
+            }
+          }}
+          title="Emergency Distress Call (Coast Guard MRCC 1554 / VHF Ch 16)"
+          aria-label="Trigger Maritime Emergency SOS"
+          data-testid="topbar-sos-button"
+        >
+          <span className="sos-ping-indicator" />
+          <Icon name="LifeBuoy" size={13} />
+          <span>SOS 1554</span>
+        </button>
+
         {/* Theme Factory Switcher Dropdown */}
         <div className="topbar-theme-wrap" ref={themeMenuRef}>
           <button

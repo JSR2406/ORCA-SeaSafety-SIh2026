@@ -58,6 +58,7 @@ User choices: “Let me create a distinctive, ocean-inspired direction based on 
 - Complete translations for legacy and new editorial strings; existing selected-language behavior is retained.
 - Real authentication and server-side profile/preferences persistence (existing sign-in is a demo).
 - Fisherman-focused compact home view prioritizing weather, departure risk, and local-language questions.
+- Demo SMS dispatch (Sept 2026): `POST /api/v1/alerts/dispatch-sms` sends via Fast2SMS/Twilio free tier when backend keys are set, else DEMO MODE (logged to `GET /api/v1/alerts/sms-log`, labeled simulated). Frontend queues offline in `orca-sms-outbox` localStorage with later sync; emergency prefs persist in `orca-emergency-prefs`. No provider key is ever in the frontend. A paid gateway + delivery receipts are still required before operational use.
 ### P2
 - Gradual CSS consolidation and splitting of large legacy views into data hooks and presentation components.
 - Low-bandwidth mode, source freshness at individual measurement level, shareable marine briefings.

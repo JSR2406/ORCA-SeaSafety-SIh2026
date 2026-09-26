@@ -1,0 +1,128 @@
+{
+  "model": "marine_risk",
+  "version": "v1-demo",
+  "estimator": "XGBClassifier",
+  "training_period": "2019-2023",
+  "validation_period": "2024",
+  "test_period": "2025",
+  "feature_list": [
+    "wave_height_m",
+    "wave_period_s",
+    "wind_speed_ms",
+    "current_speed_ms",
+    "visibility_km",
+    "rain_mm",
+    "sst_c",
+    "cyclone_distance_km",
+    "lightning_flag",
+    "month",
+    "hour",
+    "forecast_uncertainty"
+  ],
+  "target_definition": "0=low-risk,1=high-risk (demo rule; replace with incident history)",
+  "class_balance": {
+    "neg": 37,
+    "pos": 203
+  },
+  "best_params": {
+    "max_depth": 3,
+    "learning_rate": 0.1
+  },
+  "calibrated": false,
+  "metrics_valid": {
+    "roc_auc": 1.0,
+    "pr_auc": 1.0,
+    "f1": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "brier": 0.0009,
+    "confusion_matrix": [
+      [
+        13,
+        0
+      ],
+      [
+        0,
+        67
+      ]
+    ],
+    "calibration": [
+      {
+        "bin": [
+          0,
+          0.2
+        ],
+        "mean_pred": 0.039,
+        "mean_obs": 0.0,
+        "n": 12
+      },
+      {
+        "bin": [
+          0.2,
+          0.4
+        ],
+        "mean_pred": 0.213,
+        "mean_obs": 0.0,
+        "n": 1
+      },
+      {
+        "bin": [
+          0.8,
+          1.01
+        ],
+        "mean_pred": 0.992,
+        "mean_obs": 1.0,
+        "n": 67
+      }
+    ]
+  },
+  "metrics_test": {
+    "roc_auc": 1.0,
+    "pr_auc": 1.0,
+    "f1": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "brier": 0.0015,
+    "confusion_matrix": [
+      [
+        13,
+        0
+      ],
+      [
+        0,
+        67
+      ]
+    ],
+    "calibration": [
+      {
+        "bin": [
+          0,
+          0.2
+        ],
+        "mean_pred": 0.06,
+        "mean_obs": 0.0,
+        "n": 12
+      },
+      {
+        "bin": [
+          0.2,
+          0.4
+        ],
+        "mean_pred": 0.232,
+        "mean_obs": 0.0,
+        "n": 1
+      },
+      {
+        "bin": [
+          0.8,
+          1.01
+        ],
+        "mean_pred": 0.991,
+        "mean_obs": 1.0,
+        "n": 67
+      }
+    ]
+  },
+  "training_timestamp": "2026-09-26T17:48:53.885620",
+  "safety_note": "probability only; verdict owned by Deterministic Risk Engine"
+}

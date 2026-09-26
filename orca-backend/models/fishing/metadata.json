@@ -1,0 +1,131 @@
+{
+  "model": "fishing_suitability",
+  "version": "v1-demo",
+  "estimator": "XGBClassifier",
+  "training_period": "2019-2023",
+  "validation_period": "2024",
+  "test_period": "2025",
+  "feature_list": [
+    "lat",
+    "lon",
+    "sst_c",
+    "chlorophyll",
+    "wind_speed_ms",
+    "wind_direction_deg",
+    "current_speed_ms",
+    "current_direction_deg",
+    "wave_height_m",
+    "depth_m",
+    "distance_from_coast_km",
+    "month",
+    "season_idx",
+    "hour"
+  ],
+  "target_definition": "0=unsuitable,1=potentially suitable (INCOIS PFZ-derived)",
+  "class_balance": {
+    "neg": 100,
+    "pos": 100,
+    "scale_pos_weight": 1.0
+  },
+  "best_params": {
+    "max_depth": 4,
+    "learning_rate": 0.05
+  },
+  "calibrated": true,
+  "metrics_valid": {
+    "roc_auc": 0.6012,
+    "pr_auc": 0.6143,
+    "f1": 0.5455,
+    "precision": 0.5676,
+    "recall": 0.525,
+    "brier": 0.241,
+    "confusion_matrix": [
+      [
+        24,
+        16
+      ],
+      [
+        19,
+        21
+      ]
+    ],
+    "calibration": [
+      {
+        "bin": [
+          0.2,
+          0.4
+        ],
+        "mean_pred": 0.369,
+        "mean_obs": 0.308,
+        "n": 13
+      },
+      {
+        "bin": [
+          0.4,
+          0.6
+        ],
+        "mean_pred": 0.497,
+        "mean_obs": 0.481,
+        "n": 54
+      },
+      {
+        "bin": [
+          0.6,
+          0.8
+        ],
+        "mean_pred": 0.646,
+        "mean_obs": 0.769,
+        "n": 13
+      }
+    ]
+  },
+  "metrics_test": {
+    "roc_auc": 0.5494,
+    "pr_auc": 0.5998,
+    "f1": 0.4444,
+    "precision": 0.5,
+    "recall": 0.4,
+    "brier": 0.2479,
+    "confusion_matrix": [
+      [
+        24,
+        16
+      ],
+      [
+        24,
+        16
+      ]
+    ],
+    "calibration": [
+      {
+        "bin": [
+          0.2,
+          0.4
+        ],
+        "mean_pred": 0.373,
+        "mean_obs": 0.385,
+        "n": 13
+      },
+      {
+        "bin": [
+          0.4,
+          0.6
+        ],
+        "mean_pred": 0.488,
+        "mean_obs": 0.492,
+        "n": 59
+      },
+      {
+        "bin": [
+          0.6,
+          0.8
+        ],
+        "mean_pred": 0.633,
+        "mean_obs": 0.75,
+        "n": 8
+      }
+    ]
+  },
+  "dataset_version": "fishing_training v1",
+  "training_timestamp": "2026-09-26T17:42:19.991219"
+}

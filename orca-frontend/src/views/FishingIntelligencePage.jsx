@@ -13,10 +13,22 @@ import { useLanguage } from '../context/LanguageContext';
 import { getRealPfzZones } from '../services/apiClient';
 
 const PORT_COORDS = {
+  'Veraval': { lat: 20.90, lon: 70.37 },
+  'Porbandar': { lat: 21.64, lon: 69.60 },
+  'Mumbai': { lat: 18.92, lon: 72.83 },
+  'Mormugao': { lat: 15.42, lon: 73.81 },
+  'Malpe': { lat: 13.35, lon: 74.70 },
+  'Mangalore': { lat: 12.87, lon: 74.84 },
   'Kochi': { lat: 9.93, lon: 76.27 },
   'Munambam': { lat: 10.18, lon: 76.18 },
   'Alappuzha': { lat: 9.49, lon: 76.32 },
-  'Neendakara': { lat: 8.93, lon: 76.53 }
+  'Neendakara': { lat: 8.93, lon: 76.53 },
+  'Tuticorin': { lat: 8.75, lon: 78.18 },
+  'Chennai': { lat: 13.09, lon: 80.30 },
+  'Visakhapatnam': { lat: 17.69, lon: 83.30 },
+  'Paradip': { lat: 20.26, lon: 86.68 },
+  'Digha': { lat: 21.63, lon: 87.55 },
+  'Port Blair': { lat: 11.67, lon: 92.74 }
 };
 
 const BASELINE_DATE = '2026-09-04';
@@ -195,10 +207,32 @@ export default function FishingIntelligencePage() {
             <Icon name="Anchor" size={14} />
             <span>{t('fishing.basePort', 'BASE PORT:')}</span>
             <select data-testid="fishing-base-port" value={selectedPort} onChange={(e) => setSelectedPort(e.target.value)}>
-              <option value="Kochi">Kochi Fishing Harbour (Kerala)</option>
-              <option value="Munambam">Munambam Major Harbour</option>
-              <option value="Alappuzha">Alappuzha Coastal Landing</option>
-              <option value="Neendakara">Neendakara Deep Basin</option>
+              <optgroup label="Gujarat & Maharashtra">
+                <option value="Veraval">Veraval Fishery Harbour (Gujarat)</option>
+                <option value="Porbandar">Porbandar Fishing Port (Gujarat)</option>
+                <option value="Mumbai">Mumbai Sassoon Dock (Maharashtra)</option>
+              </optgroup>
+              <optgroup label="Goa & Karnataka">
+                <option value="Mormugao">Mormugao Deepwater (Goa)</option>
+                <option value="Malpe">Malpe Fishery Harbour (Karnataka)</option>
+                <option value="Mangalore">Old Mangalore Port (Karnataka)</option>
+              </optgroup>
+              <optgroup label="Kerala (Malabar)">
+                <option value="Kochi">Kochi Fishing Harbour (Kerala)</option>
+                <option value="Munambam">Munambam Major Harbour (Kerala)</option>
+                <option value="Alappuzha">Alappuzha Coastal Landing (Kerala)</option>
+                <option value="Neendakara">Neendakara Deep Basin (Kerala)</option>
+              </optgroup>
+              <optgroup label="Tamil Nadu & Andhra">
+                <option value="Tuticorin">Tuticorin V.O.C Port (Tamil Nadu)</option>
+                <option value="Chennai">Chennai Fishing Harbour (Tamil Nadu)</option>
+                <option value="Visakhapatnam">Visakhapatnam Fishing Port (Andhra)</option>
+              </optgroup>
+              <optgroup label="Odisha, Bengal & Islands">
+                <option value="Paradip">Paradip Major Harbour (Odisha)</option>
+                <option value="Digha">Digha Fishery Terminal (West Bengal)</option>
+                <option value="Port Blair">Port Blair Fishery Pier (A&N Islands)</option>
+              </optgroup>
             </select>
           </label>
 

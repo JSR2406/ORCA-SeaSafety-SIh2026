@@ -1,0 +1,16 @@
+[
+  "lat",
+  "lon",
+  "sst_c",
+  "chlorophyll",
+  "wind_speed_ms",
+  "wind_direction_deg",
+  "current_speed_ms",
+  "current_direction_deg",
+  "wave_height_m",
+  "depth_m",
+  "distance_from_coast_km",
+  "month",
+  "season_idx",
+  "hour"
+]

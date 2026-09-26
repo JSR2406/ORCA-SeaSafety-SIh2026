@@ -23,15 +23,55 @@ export const HARBOURS = {
   'Kochi Fishing Harbour (HQ)': {
     id: 'kochi',
     name: 'Kochi Fishing Harbour (HQ)',
-    fullName: "Kochi Fishing Harbour Base (HQ) • 09°58'N, 076°16'E",
+    fullName: "Kochi Fishing Harbour Base (HQ) • 09°58'N, 076°16'E (Kerala)",
     lat: 9.9667,
     lon: 76.2400,
     depth: '12m'
   },
+  'Veraval Fishery Harbour': {
+    id: 'veraval',
+    name: 'Veraval Fishery Harbour',
+    fullName: "Veraval Fishery Harbour • 20°54'N, 070°22'E (Gujarat)",
+    lat: 20.9000,
+    lon: 70.3667,
+    depth: '8m'
+  },
+  'Porbandar All-Weather Port': {
+    id: 'porbandar',
+    name: 'Porbandar All-Weather Port',
+    fullName: "Porbandar Port • 21°38'N, 069°36'E (Gujarat)",
+    lat: 21.6333,
+    lon: 69.6000,
+    depth: '11m'
+  },
+  'Mumbai Sassoon Dock': {
+    id: 'mumbai',
+    name: 'Mumbai Sassoon Dock',
+    fullName: "Mumbai Sassoon Dock • 18°55'N, 072°50'E (Maharashtra)",
+    lat: 18.9167,
+    lon: 72.8250,
+    depth: '9m'
+  },
+  'Mormugao Deepwater Port': {
+    id: 'mormugao',
+    name: 'Mormugao Deepwater Port',
+    fullName: "Mormugao Deepwater Port • 15°25'N, 073°48'E (Goa)",
+    lat: 15.4167,
+    lon: 73.8050,
+    depth: '14m'
+  },
+  'Malpe Fishery Harbour': {
+    id: 'malpe',
+    name: 'Malpe Fishery Harbour',
+    fullName: "Malpe Fishery Harbour • 13°21'N, 074°42'E (Karnataka)",
+    lat: 13.3520,
+    lon: 74.7010,
+    depth: '7m'
+  },
   'Munambam Fishing Port': {
     id: 'munambam',
     name: 'Munambam Fishing Port',
-    fullName: "Munambam Fishing Port • 10°11'N, 076°10'E",
+    fullName: "Munambam Fishing Port • 10°11'N, 076°10'E (Kerala)",
     lat: 10.1833,
     lon: 76.1667,
     depth: '10m'
@@ -39,7 +79,7 @@ export const HARBOURS = {
   'Alappuzha Coastal Landing': {
     id: 'alappuzha',
     name: 'Alappuzha Coastal Landing',
-    fullName: "Alappuzha Coastal Landing • 09°29'N, 076°20'E",
+    fullName: "Alappuzha Coastal Landing • 09°29'N, 076°20'E (Kerala)",
     lat: 9.4833,
     lon: 76.3333,
     depth: '8m'
@@ -47,7 +87,7 @@ export const HARBOURS = {
   'Chellanam Fishing Harbour': {
     id: 'chellanam',
     name: 'Chellanam Fishing Harbour',
-    fullName: "Chellanam Fishing Harbour • 09°48'N, 076°16'E",
+    fullName: "Chellanam Fishing Harbour • 09°48'N, 076°16'E (Kerala)",
     lat: 9.8000,
     lon: 76.2700,
     depth: '9m'
@@ -55,10 +95,58 @@ export const HARBOURS = {
   'Kollam / Neendakara Port': {
     id: 'kollam',
     name: 'Kollam / Neendakara Port',
-    fullName: "Kollam / Neendakara Port • 08°56'N, 076°32'E",
+    fullName: "Kollam / Neendakara Port • 08°56'N, 076°32'E (Kerala)",
     lat: 8.9333,
     lon: 76.5333,
     depth: '14m'
+  },
+  'Tuticorin V.O.C Port': {
+    id: 'tuticorin',
+    name: 'Tuticorin V.O.C Port',
+    fullName: "Tuticorin V.O.C Port • 08°45'N, 078°11'E (Tamil Nadu)",
+    lat: 8.7500,
+    lon: 78.1800,
+    depth: '13m'
+  },
+  'Chennai Fishing Harbour': {
+    id: 'chennai',
+    name: 'Chennai Fishing Harbour',
+    fullName: "Chennai Fishery Harbour • 13°05'N, 080°18'E (Tamil Nadu)",
+    lat: 13.0900,
+    lon: 80.3000,
+    depth: '10m'
+  },
+  'Visakhapatnam Fishing Port': {
+    id: 'visakhapatnam',
+    name: 'Visakhapatnam Fishing Port',
+    fullName: "Visakhapatnam Fishing Port • 17°41'N, 083°18'E (Andhra Pradesh)",
+    lat: 17.6900,
+    lon: 83.3000,
+    depth: '12m'
+  },
+  'Paradip Port Trust': {
+    id: 'paradip',
+    name: 'Paradip Port Trust',
+    fullName: "Paradip Port Trust • 20°15'N, 086°41'E (Odisha)",
+    lat: 20.2600,
+    lon: 86.6800,
+    depth: '14m'
+  },
+  'Digha Fishery Terminal': {
+    id: 'digha',
+    name: 'Digha Fishery Terminal',
+    fullName: "Digha Fishery Terminal • 21°38'N, 087°33'E (West Bengal)",
+    lat: 21.6300,
+    lon: 87.5500,
+    depth: '6m'
+  },
+  'Port Blair Harbour': {
+    id: 'portblair',
+    name: 'Port Blair Harbour',
+    fullName: "Port Blair Harbour • 11°40'N, 092°44'E (Andaman & Nicobar)",
+    lat: 11.6700,
+    lon: 92.7400,
+    depth: '15m'
   }
 };
 
@@ -102,6 +190,62 @@ export const DESTINATIONS = {
     lat: 10.5500,
     lon: 75.8500,
     depth: '70m'
+  },
+  'PFZ-GJ-01': {
+    id: 'PFZ-GJ-01',
+    name: 'PFZ-GJ-01: Veraval Offshore Shelf (Catch Score 94)',
+    shortName: 'PFZ-GJ-01: Veraval Offshore',
+    lat: 20.7200,
+    lon: 69.9500,
+    depth: '45m'
+  },
+  'PFZ-MH-01': {
+    id: 'PFZ-MH-01',
+    name: 'PFZ-MH-01: Ratnagiri Upwelling Front (Catch Score 91)',
+    shortName: 'PFZ-MH-01: Ratnagiri Front',
+    lat: 17.0200,
+    lon: 72.8500,
+    depth: '52m'
+  },
+  'PFZ-KA-01': {
+    id: 'PFZ-KA-01',
+    name: 'PFZ-KA-01: Malpe Continental Shelf Edge (Catch Score 89)',
+    shortName: 'PFZ-KA-01: Malpe Shelf',
+    lat: 13.3000,
+    lon: 74.2000,
+    depth: '60m'
+  },
+  'PFZ-TN-01': {
+    id: 'PFZ-TN-01',
+    name: 'PFZ-TN-01: Wadge Bank Pelagic Front (Catch Score 95)',
+    shortName: 'PFZ-TN-01: Wadge Bank',
+    lat: 7.8500,
+    lon: 77.5500,
+    depth: '48m'
+  },
+  'PFZ-AP-01': {
+    id: 'PFZ-AP-01',
+    name: 'PFZ-AP-01: Godavari Estuary Plume (Catch Score 90)',
+    shortName: 'PFZ-AP-01: Godavari Plume',
+    lat: 16.7800,
+    lon: 82.5200,
+    depth: '55m'
+  },
+  'PFZ-OD-01': {
+    id: 'PFZ-OD-01',
+    name: 'PFZ-OD-01: Paradip Shelf Break Front (Catch Score 92)',
+    shortName: 'PFZ-OD-01: Paradip Shelf',
+    lat: 20.1200,
+    lon: 86.9500,
+    depth: '62m'
+  },
+  'PFZ-WB-01': {
+    id: 'PFZ-WB-01',
+    name: 'PFZ-WB-01: Sandheads Oceanic Convergence (Catch Score 88)',
+    shortName: 'PFZ-WB-01: Sandheads Plume',
+    lat: 21.2500,
+    lon: 88.2500,
+    depth: '35m'
   },
   'Munambam': {
     id: 'Munambam',

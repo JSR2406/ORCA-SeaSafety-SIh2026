@@ -262,14 +262,16 @@ export default function Sidebar({
           })}
         </nav>
 
-        {/* Intelligence Pro Promo Card (Matching Reference) */}
+        {/* Intelligence Pro Promo Card (Compact Marine Copilot) */}
         {!isCollapsed && (
           <div className="sidebar-promo-card">
-            <div className="promo-card-icon">
-              <Icon name="Sparkles" size={15} />
+            <div className="promo-card-header">
+              <span className="promo-card-icon">
+                <Icon name="Sparkles" size={13} />
+              </span>
+              <b className="promo-card-title">{t('ocean.sidebarTitle', 'AI Oceanic Copilot')}</b>
             </div>
-            <b className="promo-card-title">{t('ocean.sidebarTitle', 'A little curiosity. A deeper understanding.')}</b>
-            <p className="promo-card-desc">{t('ocean.sidebarDescription', 'Make sense of the sea with your marine copilot.')}</p>
+            <p className="promo-card-desc">{t('ocean.sidebarDescription', 'Ocean reasoning & navigational directives.')}</p>
             <button
               type="button"
               className="promo-card-btn"

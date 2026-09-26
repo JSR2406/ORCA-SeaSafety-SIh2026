@@ -7,6 +7,7 @@ import '../simple-dashboard.css';
 import { ThemeProvider } from '../context/ThemeContext';
 import { LanguageProvider } from '../context/LanguageContext';
 import { BackendProvider } from '../context/BackendContext';
+import { UserRoleProvider } from '../context/UserRoleContext';
 
 export const metadata = {
   title: 'ORCA — Ocean Reasoning with Collaborative Agent',
@@ -52,7 +53,9 @@ export default function RootLayout({ children }) {
         <LanguageProvider>
           <ThemeProvider>
             <BackendProvider>
-              {children}
+              <UserRoleProvider>
+                {children}
+              </UserRoleProvider>
             </BackendProvider>
           </ThemeProvider>
         </LanguageProvider>

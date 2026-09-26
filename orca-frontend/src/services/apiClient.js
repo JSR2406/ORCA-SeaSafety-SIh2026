@@ -11,7 +11,7 @@ import {
   routesData as mockRoutesData
 } from '../data/mock';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || process.env.VITE_API_URL || 'http://localhost:8000';
 
 /**
  * Standard fetch helper with timeout and fallback
@@ -144,11 +144,13 @@ export async function sendChatMessage({ message, language = 'en', sessionId = nu
 
     return {
       isLive: true,
-      answer: res.answer || 'Query processed by ORCA Agent Orchestrator.',
-      queryRunId: res.query_run_id,
+      answer: res.answer || res.message || res.data || 'Query processed by ORCA Agent Orchestrator.',
+      queryRunId: res.query_run_id || `run-${Date.now().toString().slice(-4)}`,
       status: res.status || 'success',
       evidence: res.evidence || [],
       visualizations: res.visualizations || null,
+      ml_scores: res.ml_scores || null,
+      hydrodynamics: res.hydrodynamics || null,
       latencyMs,
       structuredQuery: res.structured_query
     };
@@ -333,7 +335,86 @@ export async function acknowledgeBackendAlert(alertId) {
     }, 3000);
     return { isLive: true, ...res };
   } catch (err) {
-    return { isLive: false, status: 'acknowledged', id: alertId };
+    console.warn('Backend alert acknowledge fallback:', err.message);
+    return { isLive: false, status: 'acknowledged-locally', alertId };
+  }
+}
+
+const SMS_OUTBOX_KEY = 'orca-sms-outbox';
+
+function readSmsOutbox() {
+  try {
+    return JSON.parse(localStorage.getItem(SMS_OUTBOX_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function queueSmsOffline(entry) {
+  try {
+    const box = readSmsOutbox();
+    box.push({ ...entry, queuedAt: new Date().toISOString(), status: 'queued-offline' });
+    localStorage.setItem(SMS_OUTBOX_KEY, JSON.stringify(box.slice(-50)));
+  } catch {
+    // storage unavailable — demo continues without outbox
+  }
+}
+
+export function getSmsOutbox() {
+  return readSmsOutbox();
+}
+
+export async function syncSmsOutbox() {
+  const pending = readSmsOutbox();
+  const results = [];
+  for (const item of pending) {
+    try {
+      const res = await fetchWithTimeout('/api/v1/alerts/dispatch-sms', {
+        method: 'POST',
+        body: JSON.stringify({
+          phone: item.phone, message: item.message,
+          alert_id: item.alertId, severity: item.severity
+        })
+      }, 4000);
+      results.push({ ...item, synced: true, server: res?.dispatch || res });
+    } catch (err) {
+      results.push({ ...item, synced: false, error: err.message });
+    }
+  }
+  const unsynced = results.filter((r) => !r.synced).map(({ synced, server, error, ...rest }) => rest);
+  try {
+    localStorage.setItem(SMS_OUTBOX_KEY, JSON.stringify(unsynced));
+  } catch {
+    // ignore
+  }
+  return { attempted: pending.length, synced: results.filter((r) => r.synced).length, results };
+}
+
+export async function dispatchSmsAlert({ phone, message, alertId = null, severity = 'INFO' }) {
+  try {
+    const res = await fetchWithTimeout('/api/v1/alerts/dispatch-sms', {
+      method: 'POST',
+      body: JSON.stringify({ phone, message, alert_id: alertId, severity })
+    }, 4000);
+    const dispatch = res?.dispatch || res;
+    return { isLive: true, ...dispatch };
+  } catch (err) {
+    console.warn('SMS dispatch offline — queued for later sync:', err.message);
+    queueSmsOffline({ phone, message, alertId, severity });
+    return { isLive: false, status: 'queued-offline', demo: true };
+  }
+}
+
+export async function getSmsDispatchLog(limit = 50) {
+  try {
+    const res = await fetchWithTimeout(`/api/v1/alerts/sms-log?limit=${limit}`, { method: 'GET' }, 3500);
+    return { isLive: true, entries: res?.data || [], total: res?.total || 0, demoNotice: res?.demo_notice };
+  } catch (err) {
+    const outbox = readSmsOutbox();
+    return {
+      isLive: false, total: outbox.length, error: err.message,
+      entries: outbox.map((o) => ({ ...o, demo: true, note: 'offline outbox (simulated)' }))
+    };
   }
 }
 

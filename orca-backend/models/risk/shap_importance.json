@@ -1,0 +1,17 @@
+{
+  "method": "gain_fallback (AttributeError)",
+  "importance": {
+    "wave_height_m": 0.21679,
+    "wave_period_s": 0.00287,
+    "wind_speed_ms": 0.20917,
+    "current_speed_ms": 0.00236,
+    "visibility_km": 0.03312,
+    "rain_mm": 0.02011,
+    "sst_c": 0.00258,
+    "cyclone_distance_km": 0.01468,
+    "lightning_flag": 0.46578,
+    "month": 0.01613,
+    "hour": 0.00413,
+    "forecast_uncertainty": 0.01228
+  }
+}

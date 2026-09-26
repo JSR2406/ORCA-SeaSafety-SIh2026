@@ -234,6 +234,19 @@ export const translations = {
       speakQuery: 'Speak in Your Language',
       listeningNative: 'Listening for native speech...',
     },
+    plain: {
+      alertsUpdated: 'Warnings updated',
+      alertsOffline: 'You are offline · showing saved warnings',
+    },
+    sms: {
+      sending: 'Sending test SMS…',
+      sentLive: 'Test SMS sent via live provider.',
+      sentDemo: 'Test SMS logged (demo mode — simulated).',
+      queuedOffline: 'Backend offline — SMS queued for later sync.',
+      alsoDispatch: 'Also dispatch via SMS',
+      sendTest: 'Send test SMS',
+      noNumber: 'No emergency SMS number saved — open Profile Settings first.',
+    },
   },
 
   // --------------------------------------------------------------------------

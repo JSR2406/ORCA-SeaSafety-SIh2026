@@ -1,6 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { getDemoProfile } from '../data/demoProfiles';
 
 const ROLES = ['fisherman', 'researcher', 'government', 'maritime', 'admin'];
 const STORAGE_KEY = 'orca_active_role';
@@ -8,7 +9,8 @@ const STORAGE_KEY = 'orca_active_role';
 const UserRoleContext = createContext({
   activeRole: 'fisherman',
   setActiveRole: () => {},
-  roles: ROLES
+  roles: ROLES,
+  activeProfile: getDemoProfile('fisherman'),
 });
 
 export function UserRoleProvider({ children }) {
@@ -27,8 +29,10 @@ export function UserRoleProvider({ children }) {
     try { localStorage.setItem(STORAGE_KEY, role); } catch {}
   };
 
+  const activeProfile = useMemo(() => getDemoProfile(activeRole), [activeRole]);
+
   return (
-    <UserRoleContext.Provider value={{ activeRole, setActiveRole, roles: ROLES }}>
+    <UserRoleContext.Provider value={{ activeRole, setActiveRole, roles: ROLES, activeProfile }}>
       {children}
     </UserRoleContext.Provider>
   );

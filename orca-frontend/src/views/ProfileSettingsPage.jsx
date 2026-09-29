@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppShell from '../components/AppShell';
 import Card from '../components/Card';
 import SectionHeader from '../components/SectionHeader';
@@ -8,6 +8,7 @@ import Badge from '../components/Badge';
 import Icon from '../components/Icon';
 import { getGoogleMapsApiKey, setGoogleMapsApiKey, maskApiKey, isEnvApiKey } from '../utils/googleMaps';
 import { useLanguage } from '../context/LanguageContext';
+import { useUserRole } from '../context/UserRoleContext';
 import { dispatchSmsAlert } from '../services/apiClient';
 
 const EMERGENCY_PREFS_KEY = 'orca-emergency-prefs';
@@ -22,6 +23,7 @@ function loadEmergencyPrefs() {
 
 export default function ProfileSettingsPage() {
   const { language, setLanguage, t, languages } = useLanguage();
+  const { activeRole, activeProfile } = useUserRole();
   const [activeTab, setActiveTab] = useState('profile');
   const [saved, setSaved] = useState(false);
   const [gmapsKey, setGmapsKey] = useState(() => getGoogleMapsApiKey());
@@ -29,25 +31,40 @@ export default function ProfileSettingsPage() {
   const [newGmapsKey, setNewGmapsKey] = useState('');
 
   const [form, setForm] = useState(() => ({
-    name: 'Dr. Ananya Kumar',
-    org: 'National Institute of Oceanic Studies (NIOS)',
-    role: 'Principal Marine Biologist & Coastal Researcher',
-    location: 'Kochi Base, Kerala, India',
+    name: activeProfile.name,
+    org: activeProfile.org,
+    role: activeProfile.title,
+    location: activeProfile.location,
     lang: 'English (EN)',
     units: 'Metric (°C, m, km/h)',
     radioChannel: 'VHF Channel 16 (International Distress)',
     smsEmergency: true,
     whatsappFleet: true,
-    vesselType: '14.2m Mechanized Trawler (380 HP)',
+    vesselType: activeProfile.vesselType,
     depthBuffer: 5.0,
     waveRiskThreshold: 2.0,
     autoAvoidNavalZones: true,
-    mmsiNumber: '419001248',
-    emergencyPhone: '+91 94470 12345',
+    mmsiNumber: activeProfile.mmsiNumber,
+    emergencyPhone: activeProfile.emergencyPhone,
     navtexFrequency: '518 kHz (English Standard)',
-    vesselCallSign: 'KL-09-ORCA',
+    vesselCallSign: activeProfile.vesselCallSign,
     ...loadEmergencyPrefs()
   }));
+
+  // Switching demo role signs in a different person — swap the identity card.
+  useEffect(() => {
+    setForm((prev) => ({
+      ...prev,
+      name: activeProfile.name,
+      org: activeProfile.org,
+      role: activeProfile.title,
+      location: activeProfile.location,
+      vesselType: activeProfile.vesselType,
+      mmsiNumber: activeProfile.mmsiNumber,
+      vesselCallSign: activeProfile.vesselCallSign,
+      emergencyPhone: activeProfile.emergencyPhone,
+    }));
+  }, [activeRole]);
   const [smsToast, setSmsToast] = useState('');
 
   const handleSave = () => {
@@ -100,7 +117,7 @@ export default function ProfileSettingsPage() {
       subtitle="Institutional Credentials, Operational Units & Emergency Alert Routing"
       actions={
         <div className="profile-header-actions">
-          <Badge tone="blue">RESEARCHER ACCESS</Badge>
+          <Badge tone="blue">{activeProfile.accessBadge}</Badge>
         </div>
       }
     >
@@ -109,8 +126,8 @@ export default function ProfileSettingsPage() {
         <Card className="profile-id-card">
           <div className="profile-id-flex">
             <div className="avatar large profile-avatar-lg">
-              <span>AK</span>
-              <span className="profile-verified-badge" title="Verified Govt Scientist">✓</span>
+              <span>{activeProfile.initials}</span>
+              <span className="profile-verified-badge" title={activeProfile.verifiedTitle}>✓</span>
             </div>
             <div className="profile-id-text">
               <div className="profile-name-row">
@@ -126,7 +143,7 @@ export default function ProfileSettingsPage() {
         {/* Settings Navigation Tabs */}
         <div className="tabs-modern" style={{ margin: '14px 0' }}>
           {[
-            { key: 'profile', label: 'Researcher Profile', icon: 'User' },
+            { key: 'profile', label: `${activeProfile.roleLabel} Profile`, icon: 'User' },
             { key: 'preferences', label: 'Navigational Preferences', icon: 'Sliders' },
             { key: 'notifications', label: 'Emergency Alerts Routing', icon: 'Bell' },
             { key: 'security', label: 'Security & API Keys', icon: 'Shield' }
@@ -224,7 +241,7 @@ export default function ProfileSettingsPage() {
               {saved && (
                 <span className="save-success-indicator">
                   <Icon name="CheckCircle" size={14} />
-                  <span>Configuration successfully synchronized with central INCOIS profile.</span>
+                  <span>Configuration saved for {activeProfile.name} ({activeProfile.roleLabel}).</span>
                 </span>
               )}
             </div>

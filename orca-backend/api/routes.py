@@ -153,40 +153,156 @@ async def process_query(request: ChatRequest):
 
 @router.get("/marine/ocean")
 async def get_marine_ocean(lat: float = 9.93, lon: float = 76.27):
-    """Returns ocean hydrodynamics and temperature."""
-    return {
-        "status": "success",
-        "data": [{
-            "latitude": lat,
-            "longitude": lon,
-            "temperature_c": 28.4,
-            "raw_payload": {
-                "temperature_c": 28.4,
-                "salinity_psu": 35.1,
-                "current_speed_knots": 1.2,
-                "current_direction_deg": 245
-            }
-        }]
-    }
+    """Ocean hydrodynamics — live Open-Meteo Marine (+INCOIS-THREDDS overlay), static fallback."""
+    try:
+        from ml.data_pipeline.open_meteo_live import fetch_live_snapshot
+        s = fetch_live_snapshot(lat, lon)
+        return {
+            "status": "success",
+            "is_live": bool(s.get("live")),
+            "retrieval_time": s.get("retrieval_time"),
+            "sources": s.get("sources", []),
+            "data": [{
+                "latitude": lat,
+                "longitude": lon,
+                "temperature_c": s.get("sst_c", 30.2),
+                "source": "+".join(s.get("sources", ["OPEN_METEO_MARINE"])),
+                "raw_payload": {
+                    "temperature_c": s.get("sst_c", 30.2),
+                    "salinity_psu": 35.1,
+                    "current_speed_knots": round((s.get("current_speed_ms") or 0.08) * 1.94384, 2),
+                    "current_direction_deg": s.get("current_direction_deg") or 245,
+                    "wave_height_m": s.get("wave_height_m", 0.84),
+                    "wave_period_s": s.get("wave_period_s", 9.7),
+                    "wave_direction_deg": s.get("wave_direction_deg", 233),
+                    "sst_c": s.get("sst_c", 30.2),
+                    "matched_time": s.get("matched_time"),
+                }
+            }]
+        }
+    except Exception:
+        return {
+            "status": "success",
+            "is_live": False,
+            "sources": ["STATIC_SEASONAL_FALLBACK"],
+            "data": [{
+                "latitude": lat,
+                "longitude": lon,
+                "temperature_c": 30.2,
+                "raw_payload": {
+                    "temperature_c": 30.2,
+                    "salinity_psu": 35.1,
+                    "current_speed_knots": 0.16,
+                    "current_direction_deg": 245
+                }
+            }]
+        }
+
+WMO_LABELS = {
+    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Fog", 48: "Icy fog", 51: "Light drizzle", 53: "Drizzle",
+    55: "Dense drizzle", 61: "Light rain", 63: "Rain", 65: "Heavy rain",
+    71: "Light snow", 80: "Rain showers", 81: "Rain showers", 82: "Heavy showers",
+    95: "Thunderstorm", 96: "Storm with hail", 99: "Storm with hail",
+}
 
 @router.get("/marine/weather-forecast")
 async def get_marine_weather(lat: float = 9.93, lon: float = 76.27):
-    """Returns coastal weather forecast."""
+    """Coastal weather + 7-day daily series (covers 30 Sep onward) with live sources."""
+    try:
+        from ml.data_pipeline.open_meteo_live import fetch_live_snapshot
+        s = fetch_live_snapshot(lat, lon)
+        wd = s.get("daily_weather") or {}
+        md = s.get("daily_marine") or {}
+        days = wd.get("time") or md.get("time") or []
+        entries = []
+        for i, day in enumerate(days):
+            def _pick(d, k):
+                vals = (d or {}).get(k) or []
+                return vals[i] if i < len(vals) else None
+            code = _pick(wd, "weathercode")
+            entries.append({
+                "time": f"{day} 12:00",
+                "date": day,
+                "temperature_c": _pick(wd, "temperature_2m_max"),
+                "temperature_min_c": _pick(wd, "temperature_2m_min"),
+                "wind_speed_ms": _pick(wd, "wind_speed_10m_max"),
+                "wind_direction_deg": _pick(wd, "wind_direction_10m_dominant"),
+                "precipitation_probability": _pick(wd, "precipitation_probability_max"),
+                "wave_height_m": _pick(md, "wave_height_max"),
+                "wave_period_s": _pick(md, "wave_period_max"),
+                "condition": WMO_LABELS.get(code, "Marine outlook") if code is not None else "Marine outlook",
+                "weathercode": code,
+            })
+        return {
+            "status": "success",
+            "is_live": bool(s.get("live")),
+            "retrieval_time": s.get("retrieval_time"),
+            "sources": s.get("sources", []),
+            "data": [{
+                "latitude": lat,
+                "longitude": lon,
+                "temperature_c": s.get("temperature_c", 27.8),
+                "source": "+".join(s.get("sources", ["OPEN_METEO_FORECAST"])),
+                "raw_payload": {
+                    "wind_speed_ms": s.get("wind_speed_ms", 0.55),
+                    "wind_direction_deg": s.get("wind_direction_deg", 360),
+                    "condition": WMO_LABELS.get(s.get("weathercode"), "Overcast") if s.get("weathercode") is not None else "Overcast",
+                    "wave_height_m": s.get("wave_height_m", 0.84),
+                    "pressure_hpa": s.get("pressure_hpa", 1013.1),
+                    "weathercode": s.get("weathercode", 3),
+                    "matched_time": s.get("matched_time"),
+                    "entries": entries,
+                }
+            }]
+        }
+    except Exception:
+        return {
+            "status": "success",
+            "is_live": False,
+            "sources": ["STATIC_SEASONAL_FALLBACK"],
+            "data": [{
+                "latitude": lat,
+                "longitude": lon,
+                "temperature_c": 27.8,
+                "raw_payload": {
+                    "wind_speed_ms": 0.55,
+                    "wind_direction_deg": 360,
+                    "condition": "Overcast",
+                    "wave_height_m": 0.84,
+                    "pressure_hpa": 1013.1
+                }
+            }]
+        }
+
+@router.get("/marine/latest")
+async def get_marine_latest(lat: float = 9.93, lon: float = 76.27):
+    """Single snapshot for dashboards: current conditions + 7-day series + provenance."""
+    from ml.data_pipeline.open_meteo_live import fetch_live_snapshot
+    s = fetch_live_snapshot(lat, lon)
+    wind_ms = s.get("wind_speed_ms") or 0.55
     return {
         "status": "success",
-        "data": [{
-            "latitude": lat,
-            "longitude": lon,
-            "temperature_c": 27.5,
-            "raw_payload": {
-                "wind_speed_kts": 8.4,
-                "wind_direction_deg": 65,
-                "wind_direction_compass": "ENE",
-                "condition": "Favourable / Clear swell",
-                "wave_height_m": 1.3,
-                "pressure_hpa": 1012.4
-            }
-        }]
+        "is_live": bool(s.get("live")),
+        "retrieval_time": s.get("retrieval_time"),
+        "location": {"lat": lat, "lon": lon, "name": "Kochi Coastal Waters (9.93°N, 76.27°E)"},
+        "current": {
+            "temperature_c": s.get("temperature_c"),
+            "sst_c": s.get("sst_c"),
+            "wind_speed_ms": wind_ms,
+            "wind_speed_kts": round(wind_ms * 1.94384, 1),
+            "wind_direction_deg": s.get("wind_direction_deg"),
+            "pressure_hpa": s.get("pressure_hpa"),
+            "wave_height_m": s.get("wave_height_m"),
+            "wave_period_s": s.get("wave_period_s"),
+            "wave_direction_deg": s.get("wave_direction_deg"),
+            "current_speed_ms": s.get("current_speed_ms"),
+            "matched_time": s.get("matched_time"),
+        },
+        "daily_marine": s.get("daily_marine", {}),
+        "daily_weather": s.get("daily_weather", {}),
+        "sources": s.get("sources", []),
+        "integration": "IMD + INCOIS fused in ORCA prototype backend; Open-Meteo live feed fills gaps keylessly",
     }
 
 @router.get("/marine/tides")

@@ -6973,6 +6973,18 @@ input.knowledge-search-modern::placeholder,
   border-color: #10b981;
   color: #10b981;
 }
+.demo-quick-btn.authority:hover {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+.demo-quick-btn.fleet:hover {
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+}
+.demo-quick-btn.admin:hover {
+  border-color: #64748b;
+  color: #94a3b8;
+}
 
 /* Footer Link */
 .login-footer-text {

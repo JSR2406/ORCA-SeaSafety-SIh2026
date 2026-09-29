@@ -8,6 +8,7 @@ import Icon from './Icon';
 import Logo from './Logo';
 import { navGroups } from '../data/mock';
 import { useLanguage } from '../context/LanguageContext';
+import { useUserRole } from '../context/UserRoleContext';
 
 const GROUP_TRANSLATION_KEYS = {
   'CORE OPERATIONS': 'navGroup.operations',
@@ -43,6 +44,7 @@ export default function Sidebar({
   const pathname = usePathname();
   const router = useRouter();
   const { t } = useLanguage();
+  const { activeProfile } = useUserRole();
 
   // Check if current route is inside the technical/collapsible group
   const isTechnicalRoute = navGroups
@@ -288,7 +290,7 @@ export default function Sidebar({
           <div
             className={`user-mini ${isCollapsed ? 'user-mini--collapsed' : ''}`}
             onClick={() => router.push('/settings')}
-            title="Dr. Ananya Kumar (Principal Oceanographer) — Click for Settings"
+            title={`${activeProfile.name} (${activeProfile.title}) — Click for Settings`}
             role="button"
             data-testid="sidebar-profile-link"
             tabIndex={0}
@@ -299,15 +301,15 @@ export default function Sidebar({
             }}
           >
             <div className="avatar">
-              <span>AK</span>
+              <span>{activeProfile.initials}</span>
               <span className="avatar-online" title="Telemetry Linked" />
             </div>
 
             {!isCollapsed && (
               <>
                 <div className="user-mini-info">
-                  <b>Dr. Ananya Kumar</b>
-                  <span>{t('nav.userRole', 'Oceanographer • INCOIS')}</span>
+                  <b>{activeProfile.name}</b>
+                  <span>{activeProfile.roleLine}</span>
                 </div>
                 <button
                   type="button"

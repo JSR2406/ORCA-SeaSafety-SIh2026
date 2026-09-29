@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Icon from './Icon';
 import { useTheme } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
+import { useUserRole } from '../context/UserRoleContext';
 import { getHazards } from '../services/apiClient';
 
 export default function Topbar({
@@ -16,6 +17,7 @@ export default function Topbar({
   const router = useRouter();
   const { theme: currentTheme, setTheme, themes, activeThemeMeta } = useTheme();
   const { language, setLanguage, t, languages } = useLanguage();
+  const { activeProfile } = useUserRole();
 
   const [query, setQuery] = useState('');
   const [langOpen, setLangOpen] = useState(false);
@@ -398,10 +400,10 @@ export default function Topbar({
         {/* Separator before user profile */}
         <div className="topbar-divider" />
 
-        {/* User Profile Avatar with Online Ring */}
+        {/* User Profile Avatar with Online Ring — follows the signed-in demo role */}
         <div
           className="topbar-profile"
-          title="Dr. Ananya Kumar (Principal Oceanographer) — Click for Settings"
+          title={`${activeProfile.name} (${activeProfile.title}) — Click for Settings`}
           onClick={() => router.push('/settings')}
           role="button"
           tabIndex={0}
@@ -414,12 +416,12 @@ export default function Topbar({
           data-testid="workspace-profile-button"
         >
           <div className="avatar-wrap">
-            <div className="avatar-sm">AK</div>
+            <div className="avatar-sm">{activeProfile.initials}</div>
             <span className="avatar-online-dot" />
           </div>
           <div className="profile-text-group desktop-only">
-            <span className="profile-name">Dr. Ananya</span>
-            <span className="profile-role">Oceanographer</span>
+            <span className="profile-name">{activeProfile.shortName}</span>
+            <span className="profile-role">{activeProfile.roleLabel}</span>
           </div>
         </div>
       </div>

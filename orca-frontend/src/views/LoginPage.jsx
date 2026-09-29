@@ -8,10 +8,12 @@ import Logo from '../components/Logo';
 import Icon from '../components/Icon';
 import Badge from '../components/Badge';
 import { useTheme } from '../context/ThemeContext';
+import { useUserRole } from '../context/UserRoleContext';
 
 export default function LoginPage() {
   const router = useRouter();
   const { theme, setTheme, themes, activeThemeMeta } = useTheme();
+  const { setActiveRole } = useUserRole();
 
   const [role, setRole] = useState('researcher');
   const [email, setEmail] = useState('ananya.kumar@nios.res.in');
@@ -53,11 +55,21 @@ export default function LoginPage() {
     setEmail(ROLE_CONFIGS[selectedRole].email);
   };
 
+  // Login tabs → dashboard role keys (Port Authority signs in as government).
+  const LOGIN_TO_APP_ROLE = { researcher: 'researcher', fisherman: 'fisherman', coastguard: 'government' };
+
+  const signInAs = (loginRole) => {
+    const appRole = LOGIN_TO_APP_ROLE[loginRole] || 'fisherman';
+    try { setActiveRole(appRole); } catch {}
+    try { localStorage.setItem('orca_active_role', appRole); } catch {}
+    router.push(ROLE_CONFIGS[loginRole].redirect);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     setTimeout(() => {
-      router.push(ROLE_CONFIGS[role].redirect);
+      signInAs(role);
     }, 450);
   };
 
@@ -343,25 +355,55 @@ export default function LoginPage() {
             <div className="demo-buttons-row">
               <button
                 type="button"
-                className="demo-quick-btn scientist"
-                onClick={() => {
-                  handleRoleSelect('researcher');
-                  router.push('/dashboard');
-                }}
+                className="demo-quick-btn skipper"
+                onClick={() => signInAs('fisherman')}
               >
-                <Icon name="LayoutDashboard" size={13} />
-                <span><b>Dr. Ananya</b> (Full Desktop GIS)</span>
+                <Icon name="Smartphone" size={13} />
+                <span><b>Skipper Rajesh</b> (Vessel Skipper)</span>
               </button>
               <button
                 type="button"
-                className="demo-quick-btn skipper"
+                className="demo-quick-btn scientist"
+                onClick={() => signInAs('researcher')}
+              >
+                <Icon name="LayoutDashboard" size={13} />
+                <span><b>Dr. Ananya</b> (Oceanographer)</span>
+              </button>
+              <button
+                type="button"
+                className="demo-quick-btn authority"
                 onClick={() => {
-                  handleRoleSelect('fisherman');
-                  router.push('/mobile');
+                  try { setActiveRole('government'); } catch {}
+                  try { localStorage.setItem('orca_active_role', 'government'); } catch {}
+                  router.push('/safety');
                 }}
               >
-                <Icon name="Smartphone" size={13} />
-                <span><b>Skipper Rajesh</b> (Mobile PWA)</span>
+                <Icon name="Shield" size={13} />
+                <span><b>Officer Menon</b> (Port Authority)</span>
+              </button>
+              <button
+                type="button"
+                className="demo-quick-btn fleet"
+                onClick={() => {
+                  try { setActiveRole('maritime'); } catch {}
+                  try { localStorage.setItem('orca_active_role', 'maritime'); } catch {}
+                  router.push('/dashboard');
+                }}
+              >
+                <Icon name="Navigation" size={13} />
+                <span><b>Capt. Rao</b> (Fleet Ops)</span>
+              </button>
+              <button
+                type="button"
+                className="demo-quick-btn admin"
+                onClick={() => {
+                  try { setActiveRole('admin'); } catch {}
+                  try { localStorage.setItem('orca_active_role', 'admin'); } catch {}
+                  router.push('/dashboard');
+                }}
+              >
+                <Icon name="Settings" size={13} />
+                <span><b>Aditya</b> (Platform Admin)</span>
               </button>
             </div>
           </div>

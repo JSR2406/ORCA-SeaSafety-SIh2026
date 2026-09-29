@@ -169,6 +169,7 @@ export async function sendChatMessage({ message, language = 'en', sessionId = nu
     return {
       isLive: Boolean(live?.isLive),
       isFallback: true,
+      fallbackKind: live?.isLive ? 'live-direct' : 'climatology',
       answer,
       queryRunId: `edge-${Date.now().toString().slice(-6)}`,
       status: 'fallback-live-data',
@@ -612,6 +613,8 @@ async function fetchDirectMarineLive({ lat = 9.93, lon = 76.27 } = {}) {
     return {
       isLive: true,
       isDirectLive: true,
+      isFallback: true,
+      fallbackKind: 'live-direct',
       retrievalTime: new Date().toISOString(),
       temperatureC: Number(Number(tempC).toFixed(1)),
       sstC: Number(Number(sst).toFixed(1)),
@@ -674,6 +677,8 @@ export async function getOceanConditions({ lat = 9.93, lon = 76.27 } = {}) {
       if (entries.length > 0 || c.temperature_c != null) {
         return {
           isLive: true,
+          isDirectLive: false,
+          isFallback: false,
           retrievalTime: latest.retrieval_time || new Date().toISOString(),
           temperatureC: c.temperature_c ?? 27.8,
           sstC: c.sst_c ?? 30.2,
@@ -718,6 +723,8 @@ export async function getOceanConditions({ lat = 9.93, lon = 76.27 } = {}) {
       if (forecastEntries.length > 0) {
         return {
           isLive: true,
+          isDirectLive: false,
+          isFallback: false,
           retrievalTime: oceanRes.value?.retrieval_time || weatherRes.value?.retrieval_time || new Date().toISOString(),
           temperatureC: tempC,
           sstC: rawOcean.sst_c ?? 30.2,
@@ -748,6 +755,9 @@ export async function getOceanConditions({ lat = 9.93, lon = 76.27 } = {}) {
     // 3) Labeled seasonal fallback (realistic 30 Sep 2026 values, clearly marked).
     return {
       isLive: false,
+      isDirectLive: false,
+      isFallback: true,
+      fallbackKind: 'climatology',
       retrievalTime: new Date().toISOString(),
       temperatureC: 27.8,
       sstC: 30.2,

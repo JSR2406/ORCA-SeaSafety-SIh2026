@@ -18,7 +18,7 @@ export const ConnectionNotice = () => {
   return (
     <div className={`ocean-connection ${isBackendLive ? 'is-connected' : ''}`} role="status" data-testid="connection-notice">
       {isChecking ? <LoaderCircle size={13} className="ocean-spin" /> : <Radio size={13} />}
-      <span data-testid="connection-notice-text">{isChecking ? 'Checking data connection…' : isBackendLive ? 'API connected · IMD + INCOIS feeds live. Check individual source freshness before making decisions.' : 'Prototype integration · IMD + INCOIS feeds wired via ORCA backend. Syncing live services.'}</span>
+      <span data-testid="connection-notice-text">{isChecking ? 'Checking data connection…' : isBackendLive ? 'API connected · IMD + INCOIS feeds live. Check individual source freshness before making decisions.' : 'OFFLINE FALLBACK active · live-direct telemetry where reachable, climatology otherwise. Full fusion resumes on reconnect.'}</span>
       <Link href="/system-health" data-testid="connection-details-link">Data status <ArrowUpRight size={12} /></Link>
     </div>
   );

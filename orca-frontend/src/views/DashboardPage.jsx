@@ -6,6 +6,7 @@ import AppShell from '../components/AppShell';
 import MarineMap from '../components/DynamicMarineMap';
 import Icon from '../components/Icon';
 import { useLanguage } from '../context/LanguageContext';
+import { useBackend } from '../context/BackendContext';
 import { useUserRole, ROLE_META } from '../context/UserRoleContext';
 import ResearcherDashboardView from '../components/dashboard/ResearcherDashboardView';
 import GovernmentDashboardView from '../components/dashboard/GovernmentDashboardView';
@@ -23,6 +24,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { t } = useLanguage();
   const { activeRole, setActiveRole, roles } = useUserRole();
+  const { isBackendLive } = useBackend();
 
   // Check URL for ?role= param on mount
   useEffect(() => {
@@ -183,6 +185,33 @@ export default function DashboardPage() {
     return 'Updated 30 Sep · live sync';
   }, [oceanTelemetry]);
 
+  // Three honest data modes — the offline fallback is a showcased feature.
+  const dataMode = useMemo(() => {
+    if (isBackendLive && isLiveTelemetry && !oceanTelemetry?.isFallback) {
+      return { key: 'backend-live', label: 'BACKEND LIVE · IMD + INCOIS fused', tone: 'green' };
+    }
+    if (oceanTelemetry?.isDirectLive) {
+      return { key: 'edge-live', label: 'OFFLINE FALLBACK · LIVE-DIRECT TELEMETRY', tone: 'amber' };
+    }
+    return { key: 'edge-climo', label: 'OFFLINE FALLBACK · CLIMATOLOGY', tone: 'red' };
+  }, [isBackendLive, isLiveTelemetry, oceanTelemetry]);
+
+  const dataModeStyle = {
+    green: { background: 'rgba(16,185,129,0.12)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,0.35)' },
+    amber: { background: 'rgba(245,158,11,0.12)', color: '#fcd34d', border: '1px solid rgba(245,158,11,0.40)' },
+    red: { background: 'rgba(239,68,68,0.12)', color: '#fca5a5', border: '1px solid rgba(239,68,68,0.40)' }
+  }[dataMode.tone];
+
+  const headerSubline = useMemo(() => {
+    if (dataMode.key === 'backend-live') {
+      return `Live conditions · ${oceanTelemetry?.condition || 'Overcast'} · ${oceanTelemetry?.temperatureC ?? 27.8}°C air / ${oceanTelemetry?.sstC ?? 30.2}°C sea.`;
+    }
+    if (dataMode.key === 'edge-live') {
+      return 'ORCA backend unreachable — showing live-direct telemetry via offline fallback. Full IMD + INCOIS fusion resumes when the backend reconnects.';
+    }
+    return 'ORCA backend unreachable and live feeds blocked — showing labeled Sep–Oct climatology until sync resumes.';
+  }, [dataMode, oceanTelemetry]);
+
   const topPfzZones = useMemo(() => {
     if (pfzData?.zones?.length) return pfzData.zones.slice(0, 5);
     return [
@@ -210,7 +239,9 @@ export default function DashboardPage() {
     } catch {
       setCopilotReply({
         answer: 'Sea and weather off Kochi (30 Sep): light airs ~1 kt from the north, swell ~0.84 m with ~9.7 s period, SST ~30.2°C, pressure ~1013 hPa. Near-shore artisanal window looks workable; keep VHF Ch 16 watch and recheck the 7-day outlook before committing.',
-        status: 'fallback'
+        status: 'fallback',
+        isLive: false,
+        isFallback: true
       });
     } finally {
       setCopilotLoading(false);
@@ -248,7 +279,7 @@ export default function DashboardPage() {
               <div>
                 <span className="ocean-eyebrow" data-testid="dashboard-eyebrow">KOCHI COASTAL WATERS · {updatedLabel.toUpperCase()}</span>
                 <h1 data-testid="dashboard-heading">{t('ocean.dashboardTitle', 'Today at sea')}</h1>
-                <p>{isLiveTelemetry ? `Live conditions · ${oceanTelemetry?.condition || 'Overcast'} · ${oceanTelemetry?.temperatureC ?? 27.8}°C air / ${oceanTelemetry?.sstC ?? 30.2}°C sea.` : 'Prototype integration · IMD + INCOIS feeds via ORCA backend.'}</p>
+                <p>{headerSubline}</p>
                 <div
                   data-testid="dashboard-integrations"
                   style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}
@@ -286,6 +317,20 @@ export default function DashboardPage() {
                     }}
                   >
                     Integrated internally in prototype
+                  </span>
+                  <span
+                    data-testid="dashboard-data-mode"
+                    title={dataMode.key === 'backend-live'
+                      ? 'ORCA backend reachable — IMD + INCOIS fused server-side'
+                      : 'Resilience showcase: the prototype keeps answering from cached + direct feeds while the backend is unreachable'}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '6px',
+                      fontSize: '11px', fontWeight: 700, letterSpacing: '0.02em',
+                      padding: '4px 10px', borderRadius: '999px',
+                      ...dataModeStyle
+                    }}
+                  >
+                    <Icon name={dataMode.key === 'backend-live' ? 'Radio' : 'WifiOff'} size={12} /> {dataMode.label}
                   </span>
                 </div>
               </div>
@@ -397,7 +442,7 @@ export default function DashboardPage() {
                   {copilotLoading && <div className="simple-answer" data-testid="dashboard-copilot-loading">Thinking…</div>}
                   {copilotReply && !copilotLoading && (
                     <div className="simple-answer" data-testid="dashboard-copilot-answer">
-                      <span>{copilotReply.isLive ? 'ORCA answer · IMD + INCOIS integrated' : 'ORCA answer · IMD + INCOIS prototype integration'}</span>
+                      <span>{copilotReply.isFallback ? (copilotReply.isLive ? 'ORCA answer · OFFLINE FALLBACK · LIVE-DIRECT DATA' : 'ORCA answer · OFFLINE FALLBACK · CLIMATOLOGY') : 'ORCA answer · IMD + INCOIS integrated'}</span>
                       {copilotReply.answer || copilotReply.message || 'Sea state off Kochi indicates 1.4m swell with calm surface winds.'}
                     </div>
                   )}

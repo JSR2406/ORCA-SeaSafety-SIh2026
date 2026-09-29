@@ -412,7 +412,9 @@ function CopilotContent() {
         directive: response.answer,
         evidenceCitations: citations,
         timestamp: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' IST',
-        isLiveEngine: response.isLive
+        isLiveEngine: response.isLive,
+        isFallback: response.isFallback === true,
+        fallbackKind: response.fallbackKind || null
       };
 
       setMessages((prev) => [...prev, botMsg]);
@@ -430,8 +432,16 @@ function CopilotContent() {
       actions={
         <div className="copilot-terminal-actions">
           <span className="terminal-status-tag" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <span className={isBackendLive ? "enc-pulse-dot" : "enc-pulse-dot-amber"} />
-            {isBackendLive ? `CONNECTED (${latencyMs}ms)` : 'PREVIEW MODE'}
+            <span
+              style={{
+                width: '7px', height: '7px', borderRadius: '50%',
+                background: isBackendLive ? '#10b981' : (liveMarine?.isLive ? '#f59e0b' : '#ef4444'),
+                boxShadow: `0 0 6px ${isBackendLive ? 'rgba(16,185,129,0.6)' : (liveMarine?.isLive ? 'rgba(245,158,11,0.6)' : 'rgba(239,68,68,0.6)')}`
+              }}
+            />
+            {isBackendLive
+              ? `CONNECTED (${latencyMs}ms)`
+              : (liveMarine?.isLive ? 'OFFLINE FALLBACK · LIVE-DIRECT' : 'OFFLINE FALLBACK · CLIMATOLOGY')}
           </span>
           <button className="btn secondary btn-sm" onClick={() => router.push('/multilingual')}>
             <Icon name="Languages" size={13} />
@@ -493,7 +503,7 @@ function CopilotContent() {
                 </div>
               ) : (
                 <div key={m.id} className="terminal-bulletin-entry" style={{ flexShrink: 0, minHeight: 'fit-content', height: 'auto', overflow: 'visible' }}>
-                  <div className="ocean-message-source" data-testid={`copilot-source-${m.id}`}>{m.isLiveEngine ? 'API RESPONSE · VERIFY SOURCE FRESHNESS' : 'ILLUSTRATIVE RESPONSE · NOT FOR NAVIGATION'}</div>
+                  <div className="ocean-message-source" data-testid={`copilot-source-${m.id}`}>{m.isFallback ? (m.isLiveEngine ? 'OFFLINE FALLBACK · LIVE-DIRECT TELEMETRY — VERIFY BEFORE USE' : 'OFFLINE FALLBACK · CLIMATOLOGY — NOT FOR NAVIGATION') : (m.isLiveEngine ? 'API RESPONSE · VERIFY SOURCE FRESHNESS' : 'ILLUSTRATIVE RESPONSE · NOT FOR NAVIGATION')}</div>
                   {/* Bulletin Header Bar */}
                   <div className="bulletin-header-bar">
                     <div className="bulletin-id-block">

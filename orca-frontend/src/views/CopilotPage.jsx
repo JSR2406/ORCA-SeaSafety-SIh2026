@@ -7,7 +7,7 @@ import Icon from '../components/Icon';
 import Badge from '../components/Badge';
 import { useLanguage } from '../context/LanguageContext';
 import { useBackend } from '../context/BackendContext';
-import { sendChatMessage, transcribeAudioWithSarvam, synthesizeAudioWithSarvam } from '../services/apiClient';
+import { sendChatMessage, getOceanConditions, transcribeAudioWithSarvam, synthesizeAudioWithSarvam } from '../services/apiClient';
 
 const LANG_VOICE_MAP = {
   ml: 'ml-IN',
@@ -42,32 +42,42 @@ function CopilotContent() {
       id: 1,
       sender: 'user',
       text: 'Is it safe to fish near Kochi tomorrow morning?',
-      timestamp: '21:32 IST • Transcribed from Coastal VHF'
+      timestamp: '06:15 IST • 30 Sep • Transcribed from Coastal VHF'
     },
     {
       id: 2,
       sender: 'assistant',
-      bulletinId: 'ADV-KC4-20260904-01',
-      verdict: 'MODERATE RISK — OPERATIONAL CAUTION FOR VESSELS UNDER 15M',
-      verdictTone: 'orange',
+      bulletinId: 'ADV-KC4-20260930-01',
+      verdict: 'LOW-MODERATE RISK — FAIRWAY OPERATIONS PERMITTED WITH CAUTION',
+      verdictTone: 'green',
       departureWindow: 'Recommended Departure: 04:30 – 09:30 IST',
       hydrodynamics: [
-        { param: 'Significant Wave Height (Hs)', val: '1.4 m – 1.8 m', status: 'Moderate Swell', code: 'Douglas 3' },
-        { param: 'Peak Swell Period (Tp)', val: '11.8 seconds', status: 'Long-period swell', code: 'Normal' },
-        { param: 'Surface Wind Vector', val: '065° ENE @ 9.7 kts (18 km/h)', status: 'Safe operating limits', code: 'Beaufort 3' },
-        { param: 'Cyclone / Squall Threat', val: 'Nil (Arabian Sea depression index: 0.04)', status: 'Clear', code: 'Normal' },
+        { param: 'Significant Wave Height (Hs)', val: '0.70 m', status: 'Slight Swell', code: 'Douglas 3' },
+        { param: 'Peak Swell Period (Tp)', val: '13.3 seconds', status: 'Long-period swell', code: 'Normal' },
+        { param: 'Surface Wind Vector', val: '296° WNW @ 2.2 kts (4 km/h)', status: 'Safe operating limits', code: 'Beaufort 2' },
+        { param: 'Sea Surface Temp / Pressure', val: '29.1°C / 1013.0 hPa', status: 'Normal', code: 'INCOIS-THREDDS' },
         { param: 'Navigational Geofence', val: 'NAVAREA VIII Sector Bravo firing box 12 km E', status: 'RESTRICTED', code: 'Hazard' }
       ],
-      directive: 'Small craft and motorized gillnetters may venture out with caution. Depart via Cochin Main Channel (Route B) steering 255° through Cochin Fairway Light Buoy to maintain 4.2 km clear buffer from active naval exercise box.',
+      directive: 'Small craft and motorized gillnetters may venture out with caution in these slight seas. Depart via Cochin Main Channel (Route B) steering 255° through Cochin Fairway Light Buoy to maintain 4.2 km clear buffer from the active naval exercise box.',
       evidenceCitations: [
-        'INCOIS Coupled Wave Model v4.2 (Cycle: 04 Sep 18:00 UTC)',
-        'IMD Doppler Weather Radar Station Cochin (DWR-CHN #284)',
+        'INCOIS-THREDDS Ocean State Grids + Open-Meteo Marine (live, 30 Sep snapshot)',
+        'IMD Coastal Doppler Weather Station Cochin (DWR-CHN #284)',
         'National Hydrographic Office NAVAREA VIII Warning #0482/2026',
         'Sentinel-3 OLCI Thermal Upwelling Front Telemetry'
       ],
-      timestamp: '21:32 IST'
+      timestamp: '06:15 IST',
+      isLiveEngine: true
     }
   ]);
+  const [liveMarine, setLiveMarine] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    getOceanConditions({ lat: 9.93, lon: 76.27 })
+      .then((res) => { if (active && res) setLiveMarine(res); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -323,11 +333,16 @@ function CopilotContent() {
       let verdictTone = 'orange';
       let verdict = 'MODERATE RISK — OPERATIONAL CAUTION ADVISORY';
       let departureWindow = 'Recommended Window: 04:30 – 11:30 IST';
+      const liveWave = liveMarine?.waveHeightM != null ? Number(liveMarine.waveHeightM).toFixed(2) : '0.70';
+      const livePeriod = liveMarine?.wavePeriodS ?? 13.3;
+      const liveWind = `${liveMarine?.windDirection || '296° WNW'} @ ${liveMarine?.windSpeedKts ?? '2.2'} kts`;
+      const liveSstLine = `${liveMarine?.sstC ?? 29.1}°C / ${liveMarine?.pressureHpa ?? 1013.0} hPa`;
       let hydroParams = [
-        { param: 'Significant Wave Height (Hs)', val: '1.4 m – 1.6 m', status: 'Moderate Swell', code: 'Douglas 3' },
-        { param: 'Peak Swell Period (Tp)', val: '11.8 seconds', status: 'Long-period swell', code: 'Normal' },
-        { param: 'Surface Wind Vector', val: '065° ENE @ 18 km/h', status: 'Safe limits', code: 'Beaufort 3' },
-        { param: 'Engine Telemetry', val: response.isLive ? `FastAPI Live (${response.latencyMs}ms)` : 'Edge Resilient Fallback', status: response.isLive ? 'Live API' : 'Fallback', code: response.status || 'OK' }
+        { param: 'Significant Wave Height (Hs)', val: `${liveWave} m`, status: Number(liveWave) < 1.25 ? 'Slight Swell' : 'Moderate Swell', code: 'Douglas 3' },
+        { param: 'Peak Swell Period (Tp)', val: `${livePeriod} seconds`, status: 'Long-period swell', code: 'Normal' },
+        { param: 'Surface Wind Vector', val: liveWind, status: 'Safe operating limits', code: 'Beaufort 2-3' },
+        { param: 'Sea Surface Temp / Pressure', val: liveSstLine, status: 'Normal', code: 'INCOIS-THREDDS' },
+        { param: 'Engine Telemetry', val: response.isLive ? `FastAPI Live (${response.latencyMs}ms)` : (liveMarine?.isLive ? 'Live marine telemetry (direct)' : 'Edge Resilient Fallback'), status: response.isLive || liveMarine?.isLive ? 'Live data' : 'Fallback', code: response.status || 'OK' }
       ];
 
       if (isKnowledge) {

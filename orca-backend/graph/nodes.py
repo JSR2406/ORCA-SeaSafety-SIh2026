@@ -59,6 +59,17 @@ def live_data_node(state: OrcaState) -> dict:
     ocean = Ocean(wave_height=float(wave or 1.4),
                   current_speed=round(float(cur_ms) * MS_TO_KT, 1),
                   sst=float(sst or 28.4))
+    # Stash extras the strict Weather/Ocean schema can't carry (string-valued,
+    # per OrcaState.data_sources) so answers stay consistent with the hydro table.
+    try:
+        if feats.get("wave_period_s") is not None:
+            sources["wave_period_s"] = f"{float(feats['wave_period_s']):.1f}"
+        if feats.get("wind_direction_deg") is not None:
+            sources["wind_direction_deg"] = f"{float(feats['wind_direction_deg']):.0f}"
+        if feats.get("current_direction_deg") is not None:
+            sources["current_direction_deg"] = f"{float(feats['current_direction_deg']):.0f}"
+    except Exception:
+        pass
     warnings = [
         WarningInfo(source="IMD", type="Coastal Fishermen Advisory", status="ACTIVE"),
         WarningInfo(source="INCOIS", type="Swell Surge Watch", status="MONITORING"),

@@ -36,6 +36,16 @@ def _live_context(state: OrcaState) -> dict:
         "sst_c": 28.4, "current_kt": 1.2, "pressure_hpa": 1012.4,
         "rain_mm": 0.0, "vis_km": 10.0, "live": False, "sources": [],
     }
+    _pts = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+            "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
+
+    def _set_wind_deg(deg):
+        try:
+            ctx["wind_deg"] = int(round(float(deg)))
+            ctx["wind_compass"] = _pts[round(ctx["wind_deg"] / 22.5) % 16]
+        except Exception:
+            pass
+
     try:
         if state.weather is not None:
             ctx["wind_kt"] = float(state.weather.wind or ctx["wind_kt"])
@@ -46,41 +56,65 @@ def _live_context(state: OrcaState) -> dict:
             ctx["current_kt"] = float(state.ocean.current_speed or ctx["current_kt"])
             ctx["sst_c"] = float(state.ocean.sst or ctx["sst_c"])
         if getattr(state, "data_sources", None):
-            ctx["sources"] = sorted(set(str(v) for v in state.data_sources.values() if v))
+            for k, v in state.data_sources.items():
+                if k in ("wave_period_s", "wind_direction_deg",
+                         "current_direction_deg", "pressure_hpa"):
+                    continue  # numeric extras, handled below
+                if v and any(ch.isalpha() for ch in str(v)):
+                    vs = str(v)
+                    if vs not in ctx["sources"]:
+                        ctx["sources"].append(vs)
+            ds = state.data_sources
+            if ds.get("wave_period_s") is not None:
+                try:
+                    ctx["wave_period_s"] = round(float(ds["wave_period_s"]), 1)
+                except Exception:
+                    pass
+            if ds.get("wind_direction_deg") is not None:
+                _set_wind_deg(ds["wind_direction_deg"])
+            if ds.get("pressure_hpa") is not None:
+                try:
+                    ctx["pressure_hpa"] = round(float(ds["pressure_hpa"]), 1)
+                except Exception:
+                    pass
         if bool(getattr(state, "telemetry_live", False)):
             ctx["live"] = True
     except Exception:
         pass
-    # Backfill gaps (period, pressure, direction, SST) from the cached live
-    # snapshot so arbitrary queries still answer with today's real data.
+    # Backfill gaps (period, pressure, direction, wave-dir) from the cached
+    # live snapshot so arbitrary queries still answer with today's real data —
+    # including on the live path, where the strict schema drops these fields.
     try:
-        need = (state.weather is None or state.ocean is None
-                or not bool(getattr(state, "telemetry_live", False)))
-        if need:
+        need_core = (state.weather is None or state.ocean is None
+                     or not bool(getattr(state, "telemetry_live", False)))
+        need_extras = (ctx["wave_period_s"] == 11.8 or ctx["pressure_hpa"] == 1012.4
+                       or ctx["wind_deg"] == 65)
+        if need_core or need_extras:
             from ml.data_pipeline.open_meteo_live import fetch_live_snapshot
             lat = state.location.lat if state.location else 9.93
             lon = state.location.lon if state.location else 76.27
             s = fetch_live_snapshot(lat, lon) or {}
-            if state.weather is None and s.get("wind_speed_ms") is not None:
-                ctx["wind_kt"] = round(float(s["wind_speed_ms"]) * 1.94384, 1)
-            if state.ocean is None:
-                if s.get("wave_height_m") is not None:
-                    ctx["wave_m"] = round(float(s["wave_height_m"]), 2)
-                if s.get("sst_c") is not None:
-                    ctx["sst_c"] = round(float(s["sst_c"]), 1)
-                if s.get("current_speed_ms") is not None:
-                    ctx["current_kt"] = round(float(s["current_speed_ms"]) * 1.94384, 1)
-            if s.get("wave_period_s") is not None:
+            if need_core:
+                if state.weather is None and s.get("wind_speed_ms") is not None:
+                    ctx["wind_kt"] = round(float(s["wind_speed_ms"]) * 1.94384, 1)
+                if state.ocean is None:
+                    if s.get("wave_height_m") is not None:
+                        ctx["wave_m"] = round(float(s["wave_height_m"]), 2)
+                    if s.get("sst_c") is not None:
+                        ctx["sst_c"] = round(float(s["sst_c"]), 1)
+                    if s.get("current_speed_ms") is not None:
+                        ctx["current_kt"] = round(float(s["current_speed_ms"]) * 1.94384, 1)
+            if ctx["wave_period_s"] == 11.8 and s.get("wave_period_s") is not None:
                 ctx["wave_period_s"] = round(float(s["wave_period_s"]), 1)
-            if s.get("pressure_hpa") is not None:
+            if ctx["pressure_hpa"] == 1012.4 and s.get("pressure_hpa") is not None:
                 ctx["pressure_hpa"] = round(float(s["pressure_hpa"]), 1)
-            if s.get("wind_direction_deg") is not None:
-                ctx["wind_deg"] = int(round(float(s["wind_direction_deg"])))
-                pts = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
-                       "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"]
-                ctx["wind_compass"] = pts[round(ctx["wind_deg"] / 22.5) % 16]
+            if ctx["wind_deg"] == 65 and s.get("wind_direction_deg") is not None:
+                _set_wind_deg(s["wind_direction_deg"])
             if s.get("wave_direction_deg") is not None:
-                ctx["wave_dir"] = int(round(float(s["wave_direction_deg"])))
+                try:
+                    ctx["wave_dir"] = int(round(float(s["wave_direction_deg"])))
+                except Exception:
+                    pass
             for src in (s.get("sources") or []):
                 if src not in ctx["sources"]:
                     ctx["sources"].append(src)
@@ -170,6 +204,18 @@ def synthesize_marine_knowledge(query: str, state: OrcaState) -> str:
             "• **Congregated Target Species:** High aggregation of **Indian Mackerel (*Rastrelliger kanagurta*)**, **Oil Sardine (*Sardinella longiceps*)**, and migratory **Yellowfin Tuna (*Thunnus albacares*)**.\n"
             "• **Recommended Harvest Window:** **04:30 – 10:30 IST** during morning slack tide.\n"
             "• **Transit Advice:** Depart via Cochin Main Channel (Route B) steering 255° to maintain certified buffer from active naval firing boxes."
+            + (f"\n• **{src_note}**" if src_note else "")
+        )
+
+    # 3b. Tides, Currents, Visibility — dedicated readout (before general weather)
+    if any(k in q for k in ["tide", "tidal", "current", "visibility", "slack water", "high water", "low water", "bar crossing"]):
+        return (
+            f"**Tidal & Current Readout for {loc}:**\n\n"
+            f"• **Now conditions:** {sea_line}\n"
+            "• **Tidal Regime:** Semi-diurnal (two highs / two lows daily), mean high water springs **1.15–1.2 m**.\n"
+            "• **Currents:** Flood sets North-Northwest at ~1.2 knots off the Cochin bar; slack water near high tide is the safest bar-crossing window.\n"
+            f"• **Visibility:** {ctx['vis_km']:.0f} km, rainfall {ctx['rain_mm']:.1f} mm/hr — optical navigation unrestricted.\n"
+            "• **Directive:** Time your departure/return within ±1 hour of high water, keep VHF Ch 16 watch, and recheck the 7-day outlook on the dashboard."
             + (f"\n• **{src_note}**" if src_note else "")
         )
 

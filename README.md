@@ -1,20 +1,15 @@
 # ORCA SeaSafety
 
-A Smart India Hackathon prototype for exploring oceanographic data, fishing-zone information, and maritime risk workflows. Check source freshness and coverage before interpreting results. For operational decisions, use current official advisories and local authorities.
+A Smart India Hackathon prototype for exploring marine conditions, potential fishing zones, and risk workflows. The Next.js interface connects to a FastAPI backend with marine data tools, geospatial services, and a conversational copilot.
 
-## 🌊 Overview
+| Component | Where to start |
+| --- | --- |
+| Map, dashboard, and chat | [Frontend guide](orca-frontend/README.md) |
+| API and agent flow | [Backend architecture](orca-backend/README.md) |
+| Fishing data and model design | [Fishing dataset](docs/FISHING_DATASET.md) · [ML architecture audit](docs/ML_ARCHITECTURE_AUDIT.md) |
+| Feature walkthrough | [ORCA features guide](docs/ORCA_FEATURES_GUIDE.md) |
 
-**ORCA (FloatChat)** is an enterprise-grade, multilingual marine intelligence platform designed to empower maritime operators, fishermen, oceanographic researchers, and port authorities with actionable real-time insights, hazard alerts, cyclone tracking, and AI-driven navigation.
-
-### Key Capabilities
-- 🗺️ **High-Resolution Geospatial Engine**: Google Maps JavaScript & Tile API integration with hybrid satellite, roadmap, bathymetry, and cyclone tracking layers.
-- 🤖 **Oceanographic AI Copilot**: Grounded multi-turn conversational agent with domain-specific Retrieval-Augmented Generation (RAG) and function-calling capabilities.
-- 🎙️ **Multilingual Voice Support**: Native speech-to-text and text-to-speech engine powered by Sarvam AI supporting regional Indian languages.
-- ⚠️ **Real-Time Hazard & Cyclone Warnings**: Aggregates metocean feeds from JTWC, GDACS, Open-Meteo, StormGlass, and CoastWatch.
-- 🐟 **Potential Fishing Zone (PFZ) & Marine Insights**: Dynamic SST, chlorophyll-a, wind, swell, and tide tracking for optimal and safe catch planning.
-- 🧠 **ML Governance & Continuous Learning**: Supervised marine models with ground-truth validation, continuous retraining, and evidence provenance logs.
-
----
+The frontend can fall back to sample telemetry when the backend is unavailable. Check data freshness and source coverage, and use current official advisories for decisions at sea. [ORCA Analytics](https://github.com/JSR2406/ORCA-) is a separate implementation focused on ocean-observation ingestion and query provenance.
 
 ## 📁 Repository Structure
 
@@ -46,7 +41,7 @@ ORCA_Complete/
 │   ├── tests/                                     # Comprehensive pytest test suite
 │   ├── setup.ps1                                  # Windows PowerShell automated backend runner
 │   ├── requirements.txt                           # Python dependencies
-│   └── .env.example                               # Backend environment template
+
 ├── FloatChat — Frontend Engineering & Integration Specification.pdf
 ├── SIH-2026.pptx_20260910_171820_0000.pdf         # Official presentation slide deck
 ├── SIH_JUDGE_PREPARATION_GUIDE.md                 # Complete walkthrough and demo script for judges
@@ -89,8 +84,7 @@ pip install --upgrade pip
 pip install -r requirements.txt
 
 # 3. Configure environment
-cp .env.example .env
-# Edit .env with your PostgreSQL/Supabase and API keys
+# Create .env locally and configure the services you use (see below).
 
 # 4. Start backend API
 python main.py

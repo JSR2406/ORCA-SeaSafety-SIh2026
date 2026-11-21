@@ -1,11 +1,6 @@
-# ORCA — AI Marine Intelligence & Oceanographic Copilot Platform
+# ORCA SeaSafety
 
-<div align="center">
-  <h3>Smart India Hackathon (SIH) Flagship Innovation</h3>
-  <p><strong>Next-Generation Maritime Operations, Predictive Safety, and Oceanographic AI Copilot</strong></p>
-</div>
-
----
+A Smart India Hackathon prototype for exploring oceanographic data, fishing-zone information, and maritime risk workflows. Check source freshness and coverage before interpreting results. For operational decisions, use current official advisories and local authorities.
 
 ## 🌊 Overview
 
@@ -98,7 +93,7 @@ cp .env.example .env
 # Edit .env with your PostgreSQL/Supabase and API keys
 
 # 4. Start backend API
-uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000 --reload
+python main.py
 ```
 The API will be live at `http://localhost:8000`. Swagger documentation is available at `http://localhost:8000/docs`.
 
